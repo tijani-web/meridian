@@ -1,0 +1,19 @@
+apiVersion: meridian.dev/v1alpha1
+kind: GPUQueue
+metadata:
+  name: team-llm-queue
+  namespace: default
+spec:
+  priority: 100
+  nominalQuota:
+    nvidia-h100: 32
+    nvidia-a100: 16
+  borrowingLimit:
+    nvidia-h100: 16
+  lendingLimit:
+    nvidia-h100: 16
+    nvidia-a100: 8
+  preemption:
+    reclaimWithinQueue: true
+    reclaimBorrowed: true
+    checkpointGracePeriod: 60s

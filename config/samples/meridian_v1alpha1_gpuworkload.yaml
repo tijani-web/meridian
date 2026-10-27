@@ -1,0 +1,32 @@
+apiVersion: meridian.dev/v1alpha1
+kind: GPUWorkload
+metadata:
+  name: llama-finetune
+  namespace: default
+spec:
+  queueName: team-llm-queue
+  kind: Training
+  gang:
+    size: 4
+    minAvailable: 4
+  gpusPerPod: 8
+  gpuType: nvidia-h100
+  topology:
+    preference: SameNVLinkDomain
+    required: true
+  checkpoint:
+    enabled: true
+    path: s3://meridian-checkpoints/llama-finetune/
+    ackTimeout: 60s
+  restartPolicy:
+    maxRestarts: 3
+    backoff: 15s
+  podTemplate:
+    spec:
+      containers:
+      - name: trainer
+        image: nvcr.io/nvidia/pytorch:24.01-py3
+        command: ["python", "-m", "torch.distributed.run", "train.py"]
+        resources:
+          limits:
+            nvidia.com/gpu: "8"

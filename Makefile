@@ -61,6 +61,14 @@ manifests: controller-gen ## Regenerate CRD and RBAC manifests
 	  output:rbac:artifacts:config=config/rbac \
 	  output:webhook:artifacts:config=config/webhook
 
+.PHONY: install
+install: ## Install CRDs into the K8s cluster using server-side apply
+	$(KUBECTL) apply --server-side -f config/crd/bases/
+
+.PHONY: uninstall
+uninstall: ## Uninstall CRDs from the K8s cluster
+	$(KUBECTL) delete -f config/crd/bases/
+
 .PHONY: build
 build: ## Build all binaries
 	$(GO) build $(GOFLAGS) -o bin/meridian-manager     ./cmd/manager
@@ -71,7 +79,7 @@ build: ## Build all binaries
 
 .PHONY: test
 test: ## Run unit tests with race detector
-	$(GOTEST) ./...
+	$(GOTEST) $$(go list ./... | grep -v /test/envtest)
 
 .PHONY: test-envtest
 test-envtest: envtest ## Run integration tests against a real apiserver+etcd via envtest

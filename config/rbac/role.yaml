@@ -1,0 +1,59 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: meridian-manager-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - events
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - meridian.dev
+  resources:
+  - gpuqueues
+  - gpuworkloads
+  - inferencedeployments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - meridian.dev
+  resources:
+  - gpuqueues/status
+  - gpuworkloads/status
+  - inferencedeployments/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - meridian.dev
+  resources:
+  - gpuqueues/finalizers
+  - gpuworkloads/finalizers
+  - inferencedeployments/finalizers
+  verbs:
+  - update

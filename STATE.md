@@ -5,16 +5,16 @@ Machine-readable resume state. Overwritten on every update.
 ---
 
 ## Current Phase
-`phase/01-apis-crds-webhooks`
+`phase/02-workload-controller-fsm`
 
 ## Current Branch
-`main`
+`phase/01-apis-crds-webhooks`
 
 ## Last Green Commit
-`7252f16` (initial bootstrap)
+`3a329db` (bootstrap + kind cluster verification)
 
 ## Status
-`IN_PROGRESS`
+`PHASE_01_COMPLETE`
 
 ## Open Issues
 (none)
@@ -23,32 +23,26 @@ Machine-readable resume state. Overwritten on every update.
 (none — autonomy mode active)
 
 ## Next 3 Actions
-1. Commit Phase 00 final updates and tag `phase-00-done`
-2. Create and checkout branch `phase/01-crds-webhooks`
-3. Implement `GPUQueue`, `GPUWorkload`, and `InferenceDeployment` CRDs with full kubebuilder markers and validation
+1. Commit Phase 01 changes and push branch `phase/01-apis-crds-webhooks` to GitHub.
+2. Open PR for Phase 01, merge to `main`, and push tag `phase-01-done`.
+3. Create and switch to branch `phase/02-workload-controller-fsm` to implement the Workload reconciler and state machine.
 
-## Phase 00 DoD Checklist
-- [x] Directory scaffold created
-- [x] .gitignore committed
-- [x] LICENSE (Apache-2.0)
-- [x] AGENTS.md
-- [x] PROGRESS.md
-- [x] STATE.md (this file)
-- [x] docs/VERSIONS.md (versions pinned, date checked)
-- [x] docs/LIMITATIONS.md (skeleton)
-- [x] Makefile
-- [x] .golangci.yml
-- [x] CI skeleton (.github/workflows/ci.yaml)
-- [x] deploy/kind/config.yaml (multi-node + topology labels)
-- [x] Go module initialized (go.mod)
-- [x] gh auth verified
-- [x] GitHub repo created
-- [x] First push to main
-- [x] `make kind-up` verified green (5 nodes Ready with topology labels)
-- [x] CI green on main
+## Phase 01 DoD Checklist
+- [x] All three CRDs implemented (`GPUQueue`, `GPUWorkload`, `InferenceDeployment`)
+- [x] Kubebuilder markers and validation rules complete
+- [x] Mutating and validating webhooks implemented for all three CRDs
+- [x] Generated CRDs, RBAC, and webhook manifests created
+- [x] Samples created in `config/samples/`
+- [x] CRDs applied and verified on live kind cluster (`kubectl get crd`)
+- [x] Sample resources applied, verified, and deleted on kind cluster
+- [x] Integration test harness under `test/envtest/` compiled and verified
+- [x] `docs/LIMITATIONS.md` updated with OpenAPI schema size note
+- [x] `PROGRESS.md` updated
 
 ## Completed Phases
 - Phase 00 — Bootstrap (completed 2026-10-27)
+- Phase 01 — APIs, CRDs, Webhooks, Envtest Harness (completed 2026-10-27)
 
 ## Tags Pushed
-- phase-00-done (pending push)
+- phase-00-done
+- phase-01-done (pending push)

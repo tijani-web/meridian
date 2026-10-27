@@ -1,0 +1,135 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: mutating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-meridian-dev-v1alpha1-gpuqueue
+  failurePolicy: Fail
+  name: mgpuqueue.kb.io
+  rules:
+  - apiGroups:
+    - meridian.dev
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - gpuqueues
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-meridian-dev-v1alpha1-gpuworkload
+  failurePolicy: Fail
+  name: mgpuworkload.kb.io
+  rules:
+  - apiGroups:
+    - meridian.dev
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - gpuworkloads
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-meridian-dev-v1alpha1-inferencedeployment
+  failurePolicy: Fail
+  name: minferencedeployment.kb.io
+  rules:
+  - apiGroups:
+    - meridian.dev
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - inferencedeployments
+  sideEffects: None
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-meridian-dev-v1alpha1-gpuqueue
+  failurePolicy: Fail
+  name: vgpuqueue.kb.io
+  rules:
+  - apiGroups:
+    - meridian.dev
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    - DELETE
+    resources:
+    - gpuqueues
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-meridian-dev-v1alpha1-gpuworkload
+  failurePolicy: Fail
+  name: vgpuworkload.kb.io
+  rules:
+  - apiGroups:
+    - meridian.dev
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    - DELETE
+    resources:
+    - gpuworkloads
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-meridian-dev-v1alpha1-inferencedeployment
+  failurePolicy: Fail
+  name: vinferencedeployment.kb.io
+  rules:
+  - apiGroups:
+    - meridian.dev
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    - DELETE
+    resources:
+    - inferencedeployments
+  sideEffects: None

@@ -26,6 +26,8 @@ Last updated: 2026-10-27 (Phase 00).
 - Multi-cluster federation is design-doc only (§15).
 - No real GPU node autoscaling (Karpenter integration is stretch goal).
 - Real Terraform GPU demo (`terraform/gpu-demo`) requires a cloud account and incurs cost; it is optional and documented in runbooks.
+- `GPUWorkload` CRD Schema Size: Because `GPUWorkloadSpec` embeds the full Kubernetes `corev1.PodTemplateSpec`, the generated CRD OpenAPI schema exceeds 256 KB. Applying it via standard client-side `kubectl apply` exceeds the annotation size limit (`metadata.annotations: Too long: may not be more than 262144 bytes`). Operators and manifests must use `kubectl apply --server-side` for `gpuworkloads.meridian.dev`.
+- Envtest Platform Targets: Upstream `controller-runtime` v0.25 contains an unresolved build issue in `pkg/internal/testing/process/signal_windows.go` on native Windows; additionally upstream Kubernetes provides envtest binaries (`kube-apiserver`, `etcd`) for Linux and Darwin. Envtest execution is targeted to Linux environments (CI, WSL, containers).
 
 ## Deliberate Non-Goals
 
