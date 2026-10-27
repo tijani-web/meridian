@@ -79,3 +79,37 @@ Append-only log. Each entry: date, phase, what was done, what was verified, comm
 **Next:** Phase 03 — Queues & admission (quota/borrow/lend/fair-share, gate release, property tests).
 
 ---
+
+## 2026-10-27 — Phase 03: Queues & Admission (Quota/Borrow/Lend/Fair-Share, Gate Release)
+
+**Done:**
+- Created design document `docs/design/fair-share.md`:
+  - Detailed Dominant Resource Fairness (DRF-lite) mathematical formulation for multi-accelerator topologies.
+  - Formulated dominant share equations, normalized weight vectors, and priority tie-breaking.
+  - Worked step-by-step numeric examples for 2 queues sharing H100 and A100 capacity.
+- Implemented pure DRF-lite algorithm and victim selection in `internal/controller/queue/drf.go`:
+  - `CalculateWorkloadGPUs`: Aggregates total GPU demand across gang size and per-pod GPU count.
+  - `ComputeDominantShare`: Calculates normalized dominant share across heterogeneous accelerators.
+  - `EvaluateAdmission`: Enforces nominal quota, borrowing limits, and cluster headroom availability.
+  - `SelectVictims`: Implements tie-breaking order for reclaim preemption (borrowed workloads first, lowest priority, highest dominant rate, newest admission).
+- Implemented property-based tests in `internal/controller/queue/property_test.go`:
+  - `TestPropertySafetyBound`: Validates nominal + borrowing limits never exceeded across 1,000 randomized workload sequences.
+  - `TestPropertyVictimSelectionTieBreak`: Proves deterministic victim ranking under randomized candidate sets.
+  - `TestPropertyReclaimTermination`: Proves reclaim loop terminates and satisfies required GPU deficit.
+- Implemented Queue Controller in `internal/controller/queue/queue_controller.go`:
+  - Full reconciliation loop over `GPUQueue` CRDs.
+  - Aggregates per-GPU-type usage (`meridianv1alpha1.GPUUsageBreakdown`), pending workloads, and admitted workloads.
+  - Atomically admits qualifying queued workloads and strips the `meridian.dev/admission-gate` scheduling gate from all member pods.
+  - Watches `GPUWorkload` events via `handler.EnqueueRequestsFromMapFunc` to immediately reconcile queues upon workload submission or lifecycle change.
+  - Triggers preemption by flagging victims with `Preempting` phase when nominal quota reclaim is required.
+- Integration test suite:
+  - Registered `QueueReconciler` in `test/envtest/suite_test.go`.
+  - Added `test/envtest/queue_controller_test.go` verifying nominal gang admission, scheduling gate removal, borrowing limits, and admission capping.
+
+**Verified:**
+- `go test -v ./internal/controller/queue/...` passed (all unit and randomized property tests passed) ✅.
+- `go test -c ./test/envtest/...` compiled cleanly with `GOOS=linux` ✅.
+
+**Next:** Phase 04 — Scheduler plugins (QueueSort, PreFilter, Filter, Score, Permit, Decision recorder).
+
+---
