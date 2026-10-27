@@ -22,9 +22,22 @@ Append-only log. Each entry: date, phase, what was done, what was verified, comm
 - Initialized Go module: `github.com/tijani-web/meridian`.
 
 **Verified:**
-- `gh auth status` — pending (see STATE.md blockers).
-- `make kind-up` — pending kind install completion.
+- `gh auth status` — authenticated as `tijani-web` (token scopes: gist, read:org, repo, workflow) ✅.
+- GitHub repo `tijani-web/meridian` created and pushed to `main` (commit 7252f16) ✅.
+- `kind create cluster --config deploy/kind/config.yaml` — created 5-node cluster `meridian` (1 control plane, 4 workers) ✅.
+- Topology labels verified on kind workers (`domain-a`/`domain-b`, `rack-0`/`rack-1`, `us-east-1a`/`us-east-1b`, `nvidia-h100`/`nvidia-a100`) ✅:
+  ```
+  NAME                     STATUS   NVLINK     RACK     ZONE         GPU
+  meridian-control-plane   Ready    <none>     <none>   <none>       <none>
+  meridian-worker          Ready    domain-a   rack-0   us-east-1a   nvidia-h100
+  meridian-worker2         Ready    domain-a   rack-0   us-east-1a   nvidia-h100
+  meridian-worker3         Ready    domain-b   rack-1   us-east-1b   nvidia-h100
+  meridian-worker4         Ready    domain-b   rack-1   us-east-1b   nvidia-a100
+  ```
+- `helm lint charts/meridian` — 1 chart(s) linted, 0 chart(s) failed ✅.
+- `pkg/version` package created and tested (`go test ./pkg/version/...` passed) ✅.
+- Bug #1 diagnosed, fixed in `deploy/kind/config.yaml`, and logged in `docs/debugging-log.md` (Issue #1 closed) ✅.
 
-**Next:** Complete gh auth, create GitHub repo `tijani-web/meridian`, first push, open Phase 00 PR.
+**Next:** Phase 01 — APIs, CRDs, webhooks, and envtest harness.
 
 ---

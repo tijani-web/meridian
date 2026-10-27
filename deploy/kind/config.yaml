@@ -18,18 +18,10 @@ networking:
 nodes:
   # Control plane node
   - role: control-plane
-    image: kindest/node:v1.33.1
-    kubeadmConfigPatches:
-      - |
-        kind: InitConfiguration
-        nodeRegistration:
-          kubeletExtraArgs:
-            node-labels: "node-role.kubernetes.io/control-plane=true"
 
   # Worker 0: NVLink domain A, rack 0, zone us-east-1a
   # Simulates an 8-GPU node in domain A.
   - role: worker
-    image: kindest/node:v1.33.1
     labels:
       meridian.dev/nvlink-domain: "domain-a"
       meridian.dev/rack: "rack-0"
@@ -39,7 +31,6 @@ nodes:
   # Worker 1: NVLink domain A, rack 0, zone us-east-1a
   # Same domain as worker 0 — enables SameNVLinkDomain gang placement tests.
   - role: worker
-    image: kindest/node:v1.33.1
     labels:
       meridian.dev/nvlink-domain: "domain-a"
       meridian.dev/rack: "rack-0"
@@ -49,7 +40,6 @@ nodes:
   # Worker 2: NVLink domain B, rack 1, zone us-east-1b
   # Different domain — tests cross-domain placement and anti-affinity.
   - role: worker
-    image: kindest/node:v1.33.1
     labels:
       meridian.dev/nvlink-domain: "domain-b"
       meridian.dev/rack: "rack-1"
@@ -59,14 +49,8 @@ nodes:
   # Worker 3: NVLink domain B, rack 1, zone us-east-1b
   # Pair with worker 2 in domain B.
   - role: worker
-    image: kindest/node:v1.33.1
     labels:
       meridian.dev/nvlink-domain: "domain-b"
       meridian.dev/rack: "rack-1"
       topology.kubernetes.io/zone: "us-east-1b"
       meridian.dev/gpu-type: "nvidia-a100"
-
-featureGates:
-  # Enable scheduling gates (needed for Meridian's admission control).
-  # SchedulingGates is GA in 1.30+, still listed here for documentation.
-  SchedulingGates: true

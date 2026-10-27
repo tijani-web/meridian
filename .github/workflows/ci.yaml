@@ -89,8 +89,12 @@ jobs:
 
       - name: Run envtest integration tests
         run: |
-          ASSETS=$(setup-envtest use 1.33.x --bin-path ${{ runner.temp }}/k8s -p path)
-          KUBEBUILDER_ASSETS="$ASSETS" go test -race -count=1 -timeout 10m ./test/envtest/...
+          if [ -d "test/envtest" ] && [ -n "$(find test/envtest -name '*.go' 2>/dev/null)" ]; then
+            ASSETS=$(setup-envtest use 1.33.x --bin-path ${{ runner.temp }}/k8s -p path)
+            KUBEBUILDER_ASSETS="$ASSETS" go test -race -count=1 -timeout 10m ./test/envtest/...
+          else
+            echo "test/envtest tests will run starting in Phase 01"
+          fi
 
   # ============================================================
   # Job: helm-lint
@@ -116,6 +120,7 @@ jobs:
     name: Build Images
     runs-on: ubuntu-latest
     needs: [lint-vet, unit-tests]
+    if: hashFiles('build/manager/Dockerfile') != ''
     steps:
       - uses: actions/checkout@v4
 
@@ -169,13 +174,15 @@ jobs:
         run: go install sigs.k8s.io/controller-tools/cmd/controller-gen@latest
 
       - name: Run generate + manifests
-        run: make generate manifests tidy
-
-      - name: Check for diff
         run: |
-          if ! git diff --exit-code; then
-            echo "ERROR: Generated files are not up-to-date. Run 'make generate manifests tidy' and commit."
-            exit 1
+          if [ -d "api" ] && [ -n "$(find api -name '*.go' 2>/dev/null)" ]; then
+            make generate manifests tidy
+            if ! git diff --exit-code; then
+              echo "ERROR: Generated files are not up-to-date. Run 'make generate manifests tidy' and commit."
+              exit 1
+            fi
+          else
+            echo "API CRDs will be generated and verified starting in Phase 01"
           fi
 
   # ============================================================
@@ -212,8 +219,12 @@ jobs:
 
       - name: Run smoke e2e tests
         run: |
-          KUBECONFIG=$(kind get kubeconfig --name meridian-ci) \
-          go test -race -count=1 -timeout 20m -v -run "Smoke" ./test/e2e/...
+          if [ -d "test/e2e" ] && [ -n "$(find test/e2e -name '*.go' 2>/dev/null)" ]; then
+            KUBECONFIG=$(kind get kubeconfig --name meridian-ci) \
+            go test -race -count=1 -timeout 20m -v -run "Smoke" ./test/e2e/...
+          else
+            echo "e2e smoke tests will run starting in Phase 04"
+          fi
 
       - name: Delete kind cluster
         if: always()

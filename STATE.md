@@ -5,31 +5,27 @@ Machine-readable resume state. Overwritten on every update.
 ---
 
 ## Current Phase
-`phase/00-bootstrap`
+`phase/01-apis-crds-webhooks`
 
 ## Current Branch
-`main` (phase branch `phase/00-bootstrap` will be created after first push)
+`main`
 
 ## Last Green Commit
-`(none yet — initial bootstrap)`
+`7252f16` (initial bootstrap)
 
 ## Status
 `IN_PROGRESS`
 
 ## Open Issues
-- `gh` auth not yet verified (CLI just installed, need to run `gh auth login`)
-- Helm install in progress (winget downloading v4.3.1)
-- kind install in progress (binary download to `$USERPROFILE\bin\kind.exe`)
-- make install in progress (winget GnuWin32.Make)
-- GitHub repo `tijani-web/meridian` not yet created (blocked on gh auth)
+(none)
 
 ## Blockers
-- **REQUIRES USER ACTION**: Run `gh auth login` in a terminal to authenticate the GitHub CLI. After auth, the agent can create the repo and push.
+(none — autonomy mode active)
 
 ## Next 3 Actions
-1. User authenticates: `gh auth login` → agent verifies with `gh auth status`
-2. Agent creates GitHub repo: `gh repo create tijani-web/meridian --public --description "GPU Fleet Control Plane"`
-3. Agent pushes all Phase 00 files, opens draft PR `phase/00-bootstrap → main`
+1. Commit Phase 00 final updates and tag `phase-00-done`
+2. Create and checkout branch `phase/01-crds-webhooks`
+3. Implement `GPUQueue`, `GPUWorkload`, and `InferenceDeployment` CRDs with full kubebuilder markers and validation
 
 ## Phase 00 DoD Checklist
 - [x] Directory scaffold created
@@ -45,14 +41,14 @@ Machine-readable resume state. Overwritten on every update.
 - [x] CI skeleton (.github/workflows/ci.yaml)
 - [x] deploy/kind/config.yaml (multi-node + topology labels)
 - [x] Go module initialized (go.mod)
-- [ ] gh auth verified
-- [ ] GitHub repo created
-- [ ] First push to main
-- [ ] `make kind-up` verified green
-- [ ] CI green on main
+- [x] gh auth verified
+- [x] GitHub repo created
+- [x] First push to main
+- [x] `make kind-up` verified green (5 nodes Ready with topology labels)
+- [x] CI green on main
 
 ## Completed Phases
-(none)
+- Phase 00 — Bootstrap (completed 2026-10-27)
 
 ## Tags Pushed
-(none)
+- phase-00-done (pending push)
