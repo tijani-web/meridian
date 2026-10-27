@@ -30,6 +30,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	meridianv1alpha1 "github.com/tijani-web/meridian/api/v1alpha1"
+	"github.com/tijani-web/meridian/internal/controller/workload"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -99,10 +100,20 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
+	// Register custom field indexers before manager start
+	Expect(workload.SetupWorkloadIndexes(context.Background(), mgr.GetFieldIndexer())).To(Succeed())
+
 	// Register all three webhook pairs with the manager.
 	Expect((&meridianv1alpha1.GPUQueue{}).SetupWebhookWithManager(mgr)).To(Succeed())
 	Expect((&meridianv1alpha1.GPUWorkload{}).SetupWebhookWithManager(mgr)).To(Succeed())
 	Expect((&meridianv1alpha1.InferenceDeployment{}).SetupWebhookWithManager(mgr)).To(Succeed())
+
+	// Register Workload reconciler
+	Expect((&workload.WorkloadReconciler{
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Recorder: mgr.GetEventRecorderFor("workload-controller"),
+	}).SetupWithManager(mgr)).To(Succeed())
 
 	// Run the manager in the background for the duration of the suite.
 	// mgrCancel stops it in AfterSuite without interfering with os signals.
