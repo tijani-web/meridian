@@ -1,0 +1,279 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.2
+  name: gpuqueues.meridian.dev
+spec:
+  group: meridian.dev
+  names:
+    kind: GPUQueue
+    listKind: GPUQueueList
+    plural: gpuqueues
+    shortNames:
+    - gq
+    - gpuq
+    singular: gpuqueue
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.priority
+      name: Priority
+      type: integer
+    - jsonPath: .status.admittedWorkloads
+      name: Admitted
+      type: integer
+    - jsonPath: .status.pendingWorkloads
+      name: Pending
+      type: integer
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: GPUQueue is the Schema for cluster-scoped GPU tenant quotas,
+          borrowing limits, and fair-share admission.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: GPUQueueSpec defines the desired quota, limits, and submission
+              rules for a GPU tenant queue.
+            properties:
+              borrowingLimit:
+                additionalProperties:
+                  format: int32
+                  type: integer
+                description: |-
+                  BorrowingLimit defines the maximum additional GPUs by accelerator type that this queue
+                  may borrow from cluster-wide idle capacity beyond its nominal quota.
+                type: object
+              lendingLimit:
+                additionalProperties:
+                  format: int32
+                  type: integer
+                description: |-
+                  LendingLimit defines the maximum nominal GPUs by accelerator type that this queue
+                  permits other queues to borrow when idle. If omitted, all idle nominal GPUs may be lent.
+                type: object
+              namespaceSelector:
+                description: |-
+                  NamespaceSelector determines which namespaces are permitted to submit workloads to this queue.
+                  An empty selector matches no namespaces; use matchLabels or matchExpressions.
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: |-
+                        A label selector requirement is a selector that contains values, a key, and an operator that
+                        relates the key and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: |-
+                            operator represents a key's relationship to a set of values.
+                            Valid operators are In, NotIn, Exists and DoesNotExist.
+                          type: string
+                        values:
+                          description: |-
+                            values is an array of string values. If the operator is In or NotIn,
+                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                            the values array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                    x-kubernetes-list-type: atomic
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                      map is equivalent to an element of matchExpressions, whose key field is "key", the
+                      operator is "In", and the values array contains only "value". The requirements are ANDed.
+                    type: object
+                type: object
+                x-kubernetes-map-type: atomic
+              nominalQuota:
+                additionalProperties:
+                  format: int32
+                  type: integer
+                description: |-
+                  NominalQuota defines the guaranteed baseline number of GPUs by accelerator type
+                  (e.g., "nvidia-h100": 16, "nvidia-a100": 8).
+                minProperties: 1
+                type: object
+              preemption:
+                description: Preemption specifies how and when workloads in this queue
+                  may reclaim quota or be preempted.
+                properties:
+                  checkpointGracePeriod:
+                    default: 60s
+                    description: |-
+                      CheckpointGracePeriod is the maximum time given to a victim workload to complete
+                      an in-flight checkpoint and acknowledge before being forcefully evicted.
+                    type: string
+                  reclaimBorrowed:
+                    default: true
+                    description: |-
+                      ReclaimBorrowed allows this queue to immediately reclaim nominal capacity that was
+                      temporarily lent out to other queues as borrowed capacity.
+                    type: boolean
+                  reclaimWithinQueue:
+                    default: true
+                    description: |-
+                      ReclaimWithinQueue allows higher-priority workloads to preempt lower-priority workloads
+                      within the same queue when nominal capacity is exhausted.
+                    type: boolean
+                type: object
+              priority:
+                default: 0
+                description: |-
+                  Priority provides a deterministic tie-break ordering across queues with equal fair-share ratios.
+                  Higher numbers indicate higher queue priority.
+                format: int32
+                type: integer
+            required:
+            - nominalQuota
+            type: object
+          status:
+            description: GPUQueueStatus defines the observed quota consumption, admission
+              stats, and conditions.
+            properties:
+              admittedWorkloads:
+                description: AdmittedWorkloads is the number of workloads from this
+                  queue currently admitted and occupying quota.
+                format: int32
+                minimum: 0
+                type: integer
+              conditions:
+                description: Conditions represent the current observations of the
+                  queue's state (e.g. QuotaSaturated, UnderFairShare).
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              pendingWorkloads:
+                description: PendingWorkloads is the number of submitted workloads
+                  currently waiting in this queue.
+                format: int32
+                minimum: 0
+                type: integer
+              usage:
+                additionalProperties:
+                  description: GPUUsageBreakdown tracks active GPU allocations for
+                    a specific GPU model.
+                  properties:
+                    borrowed:
+                      description: Borrowed is the count of GPUs currently used by
+                        this queue that exceed nominal quota.
+                      format: int32
+                      minimum: 0
+                      type: integer
+                    lent:
+                      description: Lent is the count of this queue's nominal GPUs
+                        currently allocated to other queues.
+                      format: int32
+                      minimum: 0
+                      type: integer
+                    used:
+                      description: Used is the total count of GPUs currently allocated
+                        to admitted workloads from this queue.
+                      format: int32
+                      minimum: 0
+                      type: integer
+                  required:
+                  - borrowed
+                  - lent
+                  - used
+                  type: object
+                description: Usage provides a per-GPU-type breakdown of currently
+                  used, borrowed, and lent accelerators.
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

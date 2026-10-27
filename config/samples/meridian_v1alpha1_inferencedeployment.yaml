@@ -1,0 +1,29 @@
+apiVersion: meridian.dev/v1alpha1
+kind: InferenceDeployment
+metadata:
+  name: llama-3-8b-serving
+  namespace: default
+spec:
+  model:
+    name: llama-3-8b-instruct
+    uri: gs://meridian-models/llama-3-8b-instruct/
+    revision: main
+  runtime:
+    image: vllm/vllm-openai:v0.4.0
+    port: 8000
+    metricsPath: /metrics
+  replicas: 2
+  routing:
+    strategy: LeastQueue
+    loadShedding:
+      maxQueueDepth: 150
+  rollout:
+    strategy: Canary
+    steps:
+    - weight: 10
+      pauseSeconds: 300
+    - weight: 50
+      pauseSeconds: 600
+    - weight: 100
+  warmup:
+    minWarmRequests: 2
