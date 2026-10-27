@@ -1,0 +1,121 @@
+# charts/meridian/values.yaml
+# Default values for the Meridian Helm chart.
+# Override with --set or -f <values-file> at install time.
+
+# ============================================================
+# Global image settings
+# ============================================================
+image:
+  registry: ghcr.io/tijani-web
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+# ============================================================
+# meridian-manager (leader-elected, 2 replicas)
+# ============================================================
+manager:
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+  leaderElection:
+    enabled: true
+    leaseDuration: 15s
+    renewDeadline: 10s
+    retryPeriod: 2s
+  metricsPort: 8080
+  healthProbePort: 8081
+
+# ============================================================
+# meridian-scheduler (single replica; HA via leader election)
+# ============================================================
+scheduler:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+  # Decision record ring buffer size (number of records per pod)
+  decisionRecordSize: 1000
+  # Scoring weights (configurable via KubeSchedulerConfiguration plugin args)
+  scoring:
+    fragmentationWeight: 60
+    topologyAffinityWeight: 30
+    healthPenaltyWeight: 10
+
+# ============================================================
+# meridian-agent (DaemonSet on GPU nodes)
+# ============================================================
+agent:
+  nodeSelector:
+    meridian.dev/gpu-type: ""  # Empty means all nodes; set to a type to restrict
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "256Mi"
+  healthSource: dcgm  # "nvml" | "dcgm" — dcgm is default (requires dcgm-exporter)
+  dcgmEndpoint: "http://localhost:9400/metrics"
+  flapDamping:
+    unhealthyThreshold: 3     # consecutive failures to mark unhealthy
+    recoveryThreshold: 5      # consecutive successes to mark healthy again
+    evaluationWindow: 60s
+
+# ============================================================
+# meridian-router (inference request router)
+# ============================================================
+router:
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "1000m"
+      memory: "512Mi"
+  metricsScrapInterval: 5s
+  metricsStalenessThreshold: 15s
+  port: 8080
+
+# ============================================================
+# cert-manager (for webhook TLS)
+# ============================================================
+cert-manager:
+  enabled: true
+  installCRDs: false  # Assume cert-manager CRDs are pre-installed
+
+# ============================================================
+# Prometheus monitoring
+# ============================================================
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+  prometheusRule:
+    enabled: true
+
+# ============================================================
+# RBAC
+# ============================================================
+rbac:
+  create: true
+
+# ============================================================
+# Service accounts
+# ============================================================
+serviceAccount:
+  create: true
+  annotations: {}

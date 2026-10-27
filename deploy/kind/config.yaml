@@ -1,0 +1,72 @@
+# Kind cluster configuration for Meridian local development.
+# Creates a 1-control-plane + 4-worker cluster.
+# Workers are labeled with GPU topology information to exercise
+# the scheduler's topology-aware placement plugins.
+# No real GPUs; KWOK or direct node patching adds nvidia.com/gpu capacity
+# for scale and integration tests.
+
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+
+name: meridian
+
+networking:
+  # Use a fixed subnet to make kubeconfig URLs stable across recreations.
+  podSubnet: "10.244.0.0/16"
+  serviceSubnet: "10.96.0.0/12"
+
+nodes:
+  # Control plane node
+  - role: control-plane
+    image: kindest/node:v1.33.1
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "node-role.kubernetes.io/control-plane=true"
+
+  # Worker 0: NVLink domain A, rack 0, zone us-east-1a
+  # Simulates an 8-GPU node in domain A.
+  - role: worker
+    image: kindest/node:v1.33.1
+    labels:
+      meridian.dev/nvlink-domain: "domain-a"
+      meridian.dev/rack: "rack-0"
+      topology.kubernetes.io/zone: "us-east-1a"
+      meridian.dev/gpu-type: "nvidia-h100"
+
+  # Worker 1: NVLink domain A, rack 0, zone us-east-1a
+  # Same domain as worker 0 — enables SameNVLinkDomain gang placement tests.
+  - role: worker
+    image: kindest/node:v1.33.1
+    labels:
+      meridian.dev/nvlink-domain: "domain-a"
+      meridian.dev/rack: "rack-0"
+      topology.kubernetes.io/zone: "us-east-1a"
+      meridian.dev/gpu-type: "nvidia-h100"
+
+  # Worker 2: NVLink domain B, rack 1, zone us-east-1b
+  # Different domain — tests cross-domain placement and anti-affinity.
+  - role: worker
+    image: kindest/node:v1.33.1
+    labels:
+      meridian.dev/nvlink-domain: "domain-b"
+      meridian.dev/rack: "rack-1"
+      topology.kubernetes.io/zone: "us-east-1b"
+      meridian.dev/gpu-type: "nvidia-h100"
+
+  # Worker 3: NVLink domain B, rack 1, zone us-east-1b
+  # Pair with worker 2 in domain B.
+  - role: worker
+    image: kindest/node:v1.33.1
+    labels:
+      meridian.dev/nvlink-domain: "domain-b"
+      meridian.dev/rack: "rack-1"
+      topology.kubernetes.io/zone: "us-east-1b"
+      meridian.dev/gpu-type: "nvidia-a100"
+
+featureGates:
+  # Enable scheduling gates (needed for Meridian's admission control).
+  # SchedulingGates is GA in 1.30+, still listed here for documentation.
+  SchedulingGates: true

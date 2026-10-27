@@ -1,0 +1,95 @@
+run:
+  timeout: 10m
+  issues-exit-code: 1
+  tests: true
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+
+linters:
+  enable:
+    - errcheck        # Check for unchecked errors — mandatory per §1.4
+    - gosimple        # Simplification suggestions
+    - govet           # go vet checks
+    - ineffassign     # Detect useless assignments
+    - staticcheck     # SA* checks
+    - unused          # Detect unused code
+    - gofmt           # Code formatting
+    - goimports       # Import ordering
+    - gocritic        # Opinionated style checks
+    - revive          # Configurable linter
+    - misspell        # Spelling in comments/strings
+    - unconvert       # Unnecessary type conversions
+    - unparam         # Unused function params
+    - nilerr          # Check nil error returns
+    - errorlint       # Check error wrapping (fmt.Errorf %w)
+    - exhaustive      # Exhaustive enum switches
+    - godot           # Doc comments end with period
+    - whitespace      # Trailing whitespace
+    - wsl             # Whitespace linting
+    - bodyclose       # HTTP response body close
+    - noctx           # HTTP requests without context
+    - contextcheck    # Verify context is propagated
+    - tparallel       # t.Parallel() in tests
+    - paralleltest    # Detect missing t.Parallel() calls
+    - cyclop          # Cyclomatic complexity
+    - funlen          # Function length
+    - godox           # TODO/FIXME/BUG comments (warns, not error)
+    - gocognit        # Cognitive complexity
+
+  disable:
+    - lll             # Line length — handled by code review
+    - dupl            # Duplication — too noisy for controller patterns
+
+linters-settings:
+  errcheck:
+    # Never ignore errors without a justifying comment
+    check-type-assertions: true
+    check-blank: true
+
+  govet:
+    check-shadowing: true
+    enable-all: true
+
+  revive:
+    rules:
+      - name: exported
+        arguments:
+          - disableStutteringCheck  # Allow e.g. GPUQueueSpec in package gpuqueue
+
+  errorlint:
+    errorf: true       # Require %w for error wrapping
+    asserts: true
+    comparison: true
+
+  cyclop:
+    max-complexity: 15
+
+  funlen:
+    lines: 80
+    statements: 50
+
+  gocognit:
+    min-complexity: 20
+
+  godot:
+    scope: declarations
+    capital: false
+
+issues:
+  exclude-rules:
+    # Generated files are exempt
+    - path: "zz_generated"
+      linters: [all]
+    # Test files get relaxed funlen
+    - path: "_test\\.go"
+      linters: [funlen, cyclop, gocognit]
+    # tools/ are test infrastructure, not product code — some relaxation allowed
+    - path: "tools/"
+      linters: [funlen, cyclop, gocognit, godox]
+
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false

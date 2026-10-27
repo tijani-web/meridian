@@ -1,0 +1,78 @@
+# Binaries
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go build artifacts
+*.o
+*.a
+*.test
+vendor/
+
+# Test and coverage
+coverage.out
+coverage.html
+*.prof
+*.pprof
+
+# Controller-gen / kubebuilder generated (committed; ignore temp)
+/testbin/
+
+# Kind / kubeconfig — NEVER commit these
+kubeconfig
+kubeconfig-*
+.kube/
+**/kubeconfig*.yaml
+
+# Secrets and credentials — NEVER commit
+*.pem
+*.key
+*.crt
+*.pfx
+*.p12
+*secret*.yaml
+*secret*.json
+*credentials*
+.env
+.env.*
+gcp-*.json
+service-account*.json
+
+# Helm chart artifacts (generated lock files are committed; ignore cache)
+charts/*/charts/
+.helm/
+
+# Terraform
+terraform/.terraform/
+terraform/**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!terraform/**/*.tfvars.example
+.terraform.lock.hcl
+terraform/**/.terraform.lock.hcl
+
+# IDE and editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Build outputs
+dist/
+output/
+
+# Benchmark result archives (raw results are committed intentionally)
+bench/results/**/.tmp/
+
+# Log files
+*.log
+
+# golangci-lint cache
+.golangci-lint-cache/

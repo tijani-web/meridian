@@ -1,0 +1,220 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "phase/**"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+  packages: write  # For ghcr.io image push
+
+env:
+  GO_VERSION: "1.27.1"
+  GOLANGCI_LINT_VERSION: "v2.3.0"
+
+jobs:
+  # ============================================================
+  # Job: lint-vet
+  # ============================================================
+  lint-vet:
+    name: Lint & Vet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
+          args: --timeout 10m
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: Check no mocks/stubs in product code
+        # Per §16 DoD #2: fail CI if forbidden patterns appear in product code.
+        run: |
+          echo "Checking for forbidden patterns in product code..."
+          forbidden_in_product='not implemented|TODO: implement|fake\.NewClientBuilder'
+          product_dirs="cmd pkg internal api"
+          if grep -rn --include="*.go" -E "$forbidden_in_product" $product_dirs 2>/dev/null | grep -v "_test.go"; then
+            echo "ERROR: Forbidden mock/stub pattern found in product code!"
+            exit 1
+          fi
+          echo "OK: No forbidden patterns in product code."
+
+  # ============================================================
+  # Job: unit-tests
+  # ============================================================
+  unit-tests:
+    name: Unit Tests (race)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Run unit tests with race detector
+        run: go test -race -count=1 -timeout 5m ./...
+
+  # ============================================================
+  # Job: envtest
+  # ============================================================
+  envtest:
+    name: Integration Tests (envtest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Install setup-envtest
+        run: go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+      - name: Run envtest integration tests
+        run: |
+          ASSETS=$(setup-envtest use 1.33.x --bin-path ${{ runner.temp }}/k8s -p path)
+          KUBEBUILDER_ASSETS="$ASSETS" go test -race -count=1 -timeout 10m ./test/envtest/...
+
+  # ============================================================
+  # Job: helm-lint
+  # ============================================================
+  helm-lint:
+    name: Helm Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v4.3.1
+
+      - name: Lint Meridian chart
+        run: helm lint charts/meridian
+
+  # ============================================================
+  # Job: build-images
+  # ============================================================
+  build-images:
+    name: Build Images
+    runs-on: ubuntu-latest
+    needs: [lint-vet, unit-tests]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build manager image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: build/manager/Dockerfile
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          tags: ghcr.io/tijani-web/meridian-manager:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build scheduler image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: build/scheduler/Dockerfile
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          tags: ghcr.io/tijani-web/meridian-scheduler:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ============================================================
+  # Job: generated-files-drift-check
+  # ============================================================
+  generated-drift:
+    name: Generated Files Drift Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Install controller-gen
+        run: go install sigs.k8s.io/controller-tools/cmd/controller-gen@latest
+
+      - name: Run generate + manifests
+        run: make generate manifests tidy
+
+      - name: Check for diff
+        run: |
+          if ! git diff --exit-code; then
+            echo "ERROR: Generated files are not up-to-date. Run 'make generate manifests tidy' and commit."
+            exit 1
+          fi
+
+  # ============================================================
+  # Job: e2e-smoke (kind) — runs on PRs targeting main
+  # ============================================================
+  e2e-smoke:
+    name: E2E Smoke (kind)
+    runs-on: ubuntu-latest
+    needs: [unit-tests, envtest]
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Install kind
+        run: |
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.29.0/kind-linux-amd64
+          chmod +x ./kind
+          sudo mv ./kind /usr/local/bin/kind
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Create kind cluster
+        run: kind create cluster --name meridian-ci --config deploy/kind/config.yaml --wait 120s
+
+      - name: Label nodes with topology
+        run: KUBECONFIG=$(kind get kubeconfig --name meridian-ci) ./deploy/kind/label-nodes.sh
+
+      - name: Run smoke e2e tests
+        run: |
+          KUBECONFIG=$(kind get kubeconfig --name meridian-ci) \
+          go test -race -count=1 -timeout 20m -v -run "Smoke" ./test/e2e/...
+
+      - name: Delete kind cluster
+        if: always()
+        run: kind delete cluster --name meridian-ci

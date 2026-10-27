@@ -1,0 +1,33 @@
+apiVersion: v2
+name: meridian
+description: |
+  Meridian — Kubernetes-native GPU fleet control plane.
+  Provides gang scheduling, topology-aware placement, fair-share queues,
+  checkpoint-aware preemption, canary inference rollouts, and an
+  intelligent inference router backed by real scheduling decision records.
+
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+
+keywords:
+  - gpu
+  - scheduling
+  - kubernetes
+  - machine-learning
+  - inference
+  - control-plane
+
+home: https://github.com/tijani-web/meridian
+sources:
+  - https://github.com/tijani-web/meridian
+
+maintainers:
+  - name: Basit Tijani
+    url: https://github.com/tijani-web
+
+dependencies:
+  - name: cert-manager
+    version: "1.18.1"
+    repository: https://charts.jetstack.io
+    condition: cert-manager.enabled
