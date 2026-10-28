@@ -1,0 +1,45 @@
+apiVersion: kubescheduler.config.k8s.io/v1
+kind: KubeSchedulerConfiguration
+# Meridian Scheduler Configuration
+# Deploy alongside the default kube-scheduler on the kind cluster.
+# Pods opt in via spec.schedulerName: meridian-scheduler
+clientConnection:
+  kubeconfig: ""  # in-cluster config used when kubeconfig is empty
+leaderElection:
+  leaderElect: true
+  resourceName: meridian-scheduler
+  resourceNamespace: meridian-system
+profiles:
+  - schedulerName: meridian-scheduler
+    plugins:
+      queueSort:
+        enabled:
+          - name: MeridianGPU
+        disabled:
+          - name: "*"
+      preFilter:
+        enabled:
+          - name: MeridianGPU
+      filter:
+        enabled:
+          - name: MeridianGPU
+      score:
+        enabled:
+          - name: MeridianGPU
+      reserve:
+        enabled:
+          - name: MeridianGPU
+      permit:
+        enabled:
+          - name: MeridianGPU
+    pluginConfig:
+      - name: MeridianGPU
+        args:
+          # Anti-fragmentation weight (see docs/design/scoring.md §2)
+          weightFit: 40
+          # Topology affinity weight
+          weightTopo: 45
+          # Node health penalty weight
+          weightHealth: 15
+          # Maximum seconds a gang waits at Permit before all members are rejected
+          permitTimeoutSeconds: 120
