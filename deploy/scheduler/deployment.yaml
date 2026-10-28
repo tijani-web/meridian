@@ -1,0 +1,142 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: meridian-scheduler
+  namespace: meridian-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: meridian-scheduler
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:kube-scheduler
+subjects:
+  - kind: ServiceAccount
+    name: meridian-scheduler
+    namespace: meridian-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: meridian-scheduler-volume
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:volume-scheduler
+subjects:
+  - kind: ServiceAccount
+    name: meridian-scheduler
+    namespace: meridian-system
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: meridian-scheduler-config
+  namespace: meridian-system
+data:
+  scheduler-config.yaml: |
+    apiVersion: kubescheduler.config.k8s.io/v1
+    kind: KubeSchedulerConfiguration
+    leaderElection:
+      leaderElect: true
+      resourceName: meridian-scheduler
+      resourceNamespace: meridian-system
+    profiles:
+      - schedulerName: meridian-scheduler
+        plugins:
+          queueSort:
+            enabled: [{name: MeridianGPU}]
+            disabled: [{name: "*"}]
+          preFilter:
+            enabled: [{name: MeridianGPU}]
+          filter:
+            enabled: [{name: MeridianGPU}]
+          score:
+            enabled: [{name: MeridianGPU}]
+          reserve:
+            enabled: [{name: MeridianGPU}]
+          permit:
+            enabled: [{name: MeridianGPU}]
+        pluginConfig:
+          - name: MeridianGPU
+            args:
+              weightFit: 40
+              weightTopo: 45
+              weightHealth: 15
+              permitTimeoutSeconds: 120
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: meridian-scheduler
+  namespace: meridian-system
+  labels:
+    app: meridian-scheduler
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: meridian-scheduler
+  template:
+    metadata:
+      labels:
+        app: meridian-scheduler
+    spec:
+      serviceAccountName: meridian-scheduler
+      # Run on control-plane nodes alongside the default scheduler.
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ""
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          effect: NoSchedule
+      containers:
+        - name: meridian-scheduler
+          image: ghcr.io/tijani-web/meridian-scheduler:latest
+          args:
+            - --config=/etc/meridian/scheduler-config.yaml
+            - --leader-elect=true
+            - --leader-elect-resource-name=meridian-scheduler
+            - --leader-elect-resource-namespace=meridian-system
+            - --v=2
+          ports:
+            - name: http
+              containerPort: 10259
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 10259
+              scheme: HTTPS
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 10259
+              scheme: HTTPS
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/meridian
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: config
+          configMap:
+            name: meridian-scheduler-config

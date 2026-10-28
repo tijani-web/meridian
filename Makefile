@@ -72,7 +72,7 @@ uninstall: ## Uninstall CRDs from the K8s cluster
 .PHONY: build
 build: ## Build all binaries
 	$(GO) build $(GOFLAGS) -o bin/meridian-manager     ./cmd/manager
-	$(GO) build $(GOFLAGS) -o bin/meridian-scheduler   ./cmd/scheduler
+	$(GO) build $(GOFLAGS) -C cmd/scheduler -o ../../bin/meridian-scheduler .
 	$(GO) build $(GOFLAGS) -o bin/meridian-agent       ./cmd/agent
 	$(GO) build $(GOFLAGS) -o bin/meridian-router      ./cmd/router
 	$(GO) build $(GOFLAGS) -o bin/meridianctl          ./cmd/meridianctl
