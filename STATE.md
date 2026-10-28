@@ -5,16 +5,16 @@ Machine-readable resume state. Overwritten on every update.
 ---
 
 ## Current Phase
-`phase/06-node-health`
+`phase/07-explainability-tracing`
 
 ## Current Branch
-`phase/06-node-health`
+`phase/07-explainability-tracing`
 
 ## Last Green Commit
-Pending commit for Phase 06
+Pending commit for Phase 07
 
 ## Status
-`PHASE_06_COMPLETE — READY_FOR_PR`
+`PHASE_07_COMPLETE — READY_FOR_PR`
 
 ## Open Issues
 (none)
@@ -23,24 +23,19 @@ Pending commit for Phase 06
 (none — autonomy mode active)
 
 ## Next 3 Actions
-1. Commit Phase 06 files with Conventional Commit `feat(health): Phase 06 — Node health agent, DCGM/NVML sources, and fault controller`.
-2. Push branch `phase/06-node-health`.
-3. Open PR to `main`, merge, tag `phase-06-done`, proceed to Phase 07 (`phase/07-explainability-tracing`).
+1. Commit Phase 07 files with Conventional Commit `feat(explain): Phase 07 — Explainability engine, meridianctl CLI, OpenTelemetry tracing, and stuck-workload diagnostics`.
+2. Push branch `phase/07-explainability-tracing`.
+3. Open PR to `main`, merge, tag `phase-07-done`, proceed to Phase 08 (`phase/08-scale-benchmarks`).
 
-## Phase 06 DoD Checklist
-- [x] Design doc `docs/design/node-health-and-xid.md` with XID classification table and flap damping hysteresis
-- [x] `internal/agent/health/` (HealthSource interface, GPUStatus, ClassifyXID, DampingTracker)
-- [x] `internal/agent/health/damping_test.go` — all unit tests PASS
-- [x] `internal/agent/dcgm/` (Prometheus metrics scraper and parser)
-- [x] `internal/agent/dcgm/scraper_test.go` — 5 unit tests, all PASS
-- [x] `internal/agent/nvml/` (NVML hardware source)
-- [x] `internal/agent/nvml/source_test.go` — 3 unit tests, all PASS
-- [x] `internal/agent/agent.go` daemon loop with node condition & taint reconciliation
-- [x] `tools/gpu-fault-injector/` simulated DCGM metrics HTTP server with `/inject` and `/clear` APIs
-- [x] `internal/controller/health/` reconciler watching nodes and recovering workloads
-- [x] `internal/controller/health/health_controller_test.go` — all unit tests PASS
-- [x] `test/envtest/node_health_test.go` integration test on real apiserver
-- [x] `test/e2e/node_health_test.go` e2e fault injection & flap damping test
+## Phase 07 DoD Checklist
+- [x] Design doc `docs/design/decision-records.md` with decision ring buffer bounds (~64 MiB heap bound), diagnostic ordering, and OTel span graph
+- [x] `internal/explain/` (diagnostic explainer querying live CRDs, nodes, pods, and status)
+- [x] `internal/explain/explainer_test.go` — all unit tests PASS (including all 5 stuck-workload scenarios)
+- [x] `cmd/meridianctl/` CLI binary with `explain workload`, `explain inference`, and `status cluster`
+- [x] `internal/telemetry/tracing/` (OpenTelemetry tracer, monotonic `SequenceTracker`, lifecycle span attributes)
+- [x] `internal/telemetry/tracing/tracer_test.go` — all unit tests PASS
+- [x] `deploy/tracing/jaeger.yaml` in-cluster Jaeger all-in-one with OTLP receiver (gRPC :4317, HTTP :4318, UI :16686)
+- [x] `docs/explain-samples.md` committed sample diagnostic outputs for all 5 stuck-workload scenarios, cluster status, and inference
 - [x] Zero `fake.NewClientBuilder` across all test packages outside tools, zero mocks or stubs in product code
 - [x] All unit and integration tests green
 
@@ -52,6 +47,7 @@ Pending commit for Phase 06
 - Phase 04 — GPU-Aware Scheduler Plugin (completed 2026-10-28)
 - Phase 05 — Checkpoint Protocol & Preemption (completed 2026-10-28)
 - Phase 06 — Node Health, Telemetry, and Fault Controller (completed 2026-10-28)
+- Phase 07 — Explainability & Tracing (completed 2026-10-28)
 
 ## Tags Pushed
 - phase-00-done
@@ -60,4 +56,5 @@ Pending commit for Phase 06
 - phase-03-done
 - phase-04-done
 - phase-05-done
-- phase-06-done (pending — push after PR merge)
+- phase-06-done
+- phase-07-done (pending — push after PR merge)

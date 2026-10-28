@@ -225,3 +225,45 @@ Append-only log. Each entry: date, phase, what was done, what was verified, comm
 
 ---
 
+## 2026-10-28 — Phase 07: Explainability & Tracing
+
+**Done:**
+- Created design document `docs/design/decision-records.md`:
+  - Detailed the Decision Ring Buffer memory bounds (MaxPodsRetained=1024, MaxNodesPerPod=256, ~64 MiB worst-case heap bound).
+  - Outlined the 6-step explainability diagnostic order answering real stuck-workload causes.
+  - Specified OpenTelemetry distributed tracing across admission, gate release, scheduling, gang permit, bind, and container execution with monotonic sequence numbering (`seq`).
+- Implemented diagnostic explainability engine in `internal/explain/`:
+  - `types.go`: structured models for `WorkloadExplanation`, `QueueExplanation`, `GatedExplanation`, `SchedulingExplanation`, `CandidateScore`, `PermitExplanation`, `HistoryExplanation`, `ClusterStatus`, and `InferenceExplanation`.
+  - `explainer.go`: queries live Kubernetes resources via controller-runtime client (GPUWorkloads, GPUQueues, InferenceDeployments, Nodes, Pods), diagnosing:
+    1. Current phase and phase duration.
+    2. Queue quota, position, and specific blocking workloads holding quota.
+    3. Scheduling gate status (`meridian.dev/admission`).
+    4. Per-node filter rejections aggregated by reason, plus candidate composite scores.
+    5. Gang permit reservation progress (`X/Y reserved`) and remaining timeout.
+    6. Ordered preemption and recovery history with monotonic sequence numbers.
+    7. Cluster status: total/allocated/available GPUs, utilization percentage, healthy/unhealthy node counts, queue allocations.
+    8. Inference deployment: replica health, warmup probe gating, canary rollout percentages, and routing endpoints.
+  - `explainer_test.go`: unit tests verifying terminal formatters across all diagnostic sections, cluster status, inference deployments, and the 5 stuck-workload scenarios.
+- Implemented `meridianctl` CLI in `cmd/meridianctl/main.go`:
+  - `meridianctl explain workload <name> -n <ns>`
+  - `meridianctl explain inference <name> -n <ns>`
+  - `meridianctl status cluster`
+- Implemented OpenTelemetry tracing in `internal/telemetry/tracing/`:
+  - `tracer.go`: trace initialization, `SequenceTracker` for monotonic atomic sequence numbering, standard span attributes (`meridian.workload.uid`, `meridian.workload.phase`, `meridian.event.seq`, `meridian.queue.name`, `meridian.node.name`).
+  - `tracer_test.go`: validates `SequenceTracker` monotonicity, lifecycle span ordering (Admission -> Scheduling -> Permit), and span attribute retention.
+- Created `deploy/tracing/jaeger.yaml`:
+  - In-cluster Jaeger all-in-one manifest with OTLP receiver (gRPC :4317, HTTP :4318, UI :16686).
+- Created `docs/explain-samples.md`:
+  - Committed diagnostic output samples across all 5 stuck-workload scenarios (insufficient GPUs, topology unmet, quota-blocked, permit-waiting, preempted with cooperative checkpointing), cluster status, and inference canary.
+
+**Verified:**
+- `go test -v ./internal/explain/...` — all 5 tests PASS (`TestFormatWorkload_AllPhases`, `TestFormatCluster`, `TestFormatInference`, `TestFormatWorkload_NoHistory`, `TestStuckWorkloadScenarios`) ✅
+- `go test -v ./internal/telemetry/tracing/...` — all 3 tests PASS (`TestSequenceTracker`, `TestWorkloadSpans`, `TestWorkloadSpanAttributes`) ✅
+- `go vet ./internal/explain/... ./internal/telemetry/... ./cmd/meridianctl/...` — clean (exit code 0) ✅
+- `go build -o bin/meridianctl.exe ./cmd/meridianctl` — compiled cleanly and verified via `meridianctl.exe --help` ✅
+- Zero `fake.NewClientBuilder` across all test packages outside tools, zero mocks or stubs in product code ✅
+
+**Next:** Phase 08 — Scale & scheduler benchmarks (KWOK fleet, trace-gen, §8.1 and §8.2 runs, plots).
+
+---
+
