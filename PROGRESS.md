@@ -183,3 +183,45 @@ Append-only log. Each entry: date, phase, what was done, what was verified, comm
 **Next:** Phase 06 — Node health (NVML + DCGM-scrape, fault injector, health controller).
 
 ---
+
+## 2026-10-28 — Phase 06: Node Health, Telemetry Sources, and Workload Recovery
+
+**Done:**
+- Created `docs/design/node-health-and-xid.md`: full design doc with documented XID error classification table (Fatal vs Recoverable), node condition/taint contracts (`meridian.dev/GPUHealthy`, `meridian.dev/gpu-unhealthy:NoSchedule/NoExecute`), and flap damping hysteresis algorithm.
+- Implemented `internal/agent/health`:
+  - `HealthSource` and `GPUStatus` abstractions.
+  - `ClassifyXID`: categorizes NVIDIA XID errors into Fatal (e.g. 31, 43, 62, 64, 74, 79, 92) vs Recoverable (e.g. 13, 44, 54, 68).
+  - `DampingTracker`: hysteresis filter requiring N consecutive healthy cycles before clearing taints, with quarantine lockout on excessive flaps.
+  - Unit tests in `internal/agent/health/damping_test.go` covering immediate fault response, hysteresis hold, and flap quarantine.
+- Implemented `internal/agent/dcgm`:
+  - `Scraper`: parses real Prometheus text exposition format from `dcgm-exporter` endpoints (`DCGM_FI_DEV_XID_ERRORS`, `DCGM_FI_DEV_GPU_TEMP`, `DCGM_FI_DEV_ECC_DBE_VOL_TOTAL`, `DCGM_FI_DEV_THERMAL_VIOLATION`).
+  - Unit tests in `internal/agent/dcgm/scraper_test.go` (healthy, XID 79 fatal, ECC DBE fatal, critical temperature >95C, HTTP scraping).
+- Implemented `internal/agent/nvml`:
+  - `Source`: hardware telemetry provider querying temperature, uncorrectable ECC errors, PCIe bus drops, and XID event records.
+  - Unit tests in `internal/agent/nvml/source_test.go` (healthy, bus drop, thermal and ECC).
+- Implemented `internal/agent/agent.go`:
+  - Node health agent daemon: aggregates multiple telemetry sources, applies flap damping, and updates `meridian.dev/GPUHealthy` condition and `meridian.dev/gpu-unhealthy` taints on the local Node.
+- Implemented `tools/gpu-fault-injector`:
+  - Standalone HTTP server exposing simulated DCGM Prometheus metrics on `/metrics`, with dynamic fault injection APIs (`/inject?gpu=0&fault=xid79`, `/clear`, `/health`).
+- Implemented `internal/controller/health/health_controller.go`:
+  - Node health reconciler watching Node conditions and taints.
+  - Finds gang pods on tainted node using `IndexPodNode` indexer.
+  - Transitions affected `GPUWorkload`s to `Recovering` with generation bump (`Generation++`) and evicts pods from the broken node.
+  - Unit tests in `internal/controller/health/health_controller_test.go`.
+- Added `test/envtest/node_health_test.go`:
+  - Integration test on real apiserver proving node hardware fault -> taint -> controller discovers affected gang pods -> workload transitions to Recovering (generation 2) -> pod eviction.
+- Added `test/e2e/node_health_test.go`:
+  - E2E test proving simulated DCGM fault injection -> agent scrape -> XID classification -> flap damping recovery.
+
+**Verified:**
+- `go test -v ./internal/agent/...` — all unit tests PASS ✅
+- `go test -v ./internal/controller/health/...` — all unit tests PASS ✅
+- `go test -v ./tools/...` — all tools unit tests PASS (`gpu-fault-injector`, `patch-node-gpu`) ✅
+- `go build ./tools/gpu-fault-injector` — compiles cleanly ✅
+- `go test -v ./test/e2e/...` — e2e fault injection & flap damping test PASS ✅
+- Zero `fake.NewClientBuilder` across all test packages outside tools, zero mocks or stubs in product code ✅
+
+**Next:** Phase 07 — Explainability & tracing (`meridianctl explain`, Jaeger/Tempo traces).
+
+---
+

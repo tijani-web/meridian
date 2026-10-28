@@ -30,6 +30,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	meridianv1alpha1 "github.com/tijani-web/meridian/api/v1alpha1"
+	controllerhealth "github.com/tijani-web/meridian/internal/controller/health"
 	"github.com/tijani-web/meridian/internal/controller/queue"
 	"github.com/tijani-web/meridian/internal/controller/workload"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -121,6 +122,13 @@ var _ = BeforeSuite(func() {
 		Client:   mgr.GetClient(),
 		Scheme:   mgr.GetScheme(),
 		Recorder: mgr.GetEventRecorderFor("queue-controller"),
+	}).SetupWithManager(mgr)).To(Succeed())
+
+	// Register Node Health reconciler
+	Expect((&controllerhealth.NodeHealthReconciler{
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Recorder: mgr.GetEventRecorderFor("node-health-controller"),
 	}).SetupWithManager(mgr)).To(Succeed())
 
 	// Run the manager in the background for the duration of the suite.

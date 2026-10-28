@@ -51,9 +51,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	gpuQty := resource.MustParse(fmt.Sprintf("%d", *gpus))
-	gpuResName := v1.ResourceName("nvidia.com/gpu")
-
 	for _, n := range nodes.Items {
 		nodeName := n.Name
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -61,24 +58,11 @@ func main() {
 			if err != nil {
 				return err
 			}
-			if node.Labels == nil {
-				node.Labels = make(map[string]string)
-			}
-			node.Labels["meridian.dev/health-score"] = "100"
+			applyGPUSimulation(node, *gpus)
 			updated, err := clientset.CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{})
 			if err != nil {
 				return err
 			}
-
-			if updated.Status.Capacity == nil {
-				updated.Status.Capacity = v1.ResourceList{}
-			}
-			if updated.Status.Allocatable == nil {
-				updated.Status.Allocatable = v1.ResourceList{}
-			}
-			updated.Status.Capacity[gpuResName] = gpuQty
-			updated.Status.Allocatable[gpuResName] = gpuQty
-
 			_, err = clientset.CoreV1().Nodes().UpdateStatus(ctx, updated, metav1.UpdateOptions{})
 			return err
 		})
@@ -88,4 +72,24 @@ func main() {
 		}
 		fmt.Printf("Node %s: set %d simulated nvidia.com/gpu (capacity & allocatable)\n", nodeName, *gpus)
 	}
+}
+
+// applyGPUSimulation sets the simulated GPU capacity, allocatable, and health score label.
+func applyGPUSimulation(node *v1.Node, gpus int64) {
+	if node.Labels == nil {
+		node.Labels = make(map[string]string)
+	}
+	node.Labels["meridian.dev/health-score"] = "100"
+
+	gpuQty := resource.MustParse(fmt.Sprintf("%d", gpus))
+	gpuResName := v1.ResourceName("nvidia.com/gpu")
+
+	if node.Status.Capacity == nil {
+		node.Status.Capacity = v1.ResourceList{}
+	}
+	if node.Status.Allocatable == nil {
+		node.Status.Allocatable = v1.ResourceList{}
+	}
+	node.Status.Capacity[gpuResName] = gpuQty
+	node.Status.Allocatable[gpuResName] = gpuQty
 }
