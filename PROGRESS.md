@@ -113,3 +113,36 @@ Append-only log. Each entry: date, phase, what was done, what was verified, comm
 **Next:** Phase 04 — Scheduler plugins (QueueSort, PreFilter, Filter, Score, Permit, Decision recorder).
 
 ---
+
+## 2026-10-28 — Phase 04: GPU-Aware Out-of-Tree Scheduler Plugin
+
+**Done:**
+- Created `docs/design/scoring.md`: full composite scoring formulation (fit × 40% + topology × 45% + health × 15%) with numeric worked examples.
+- Implemented out-of-tree scheduler sub-module in `cmd/scheduler/go.mod` (separate module to isolate k8s monorepo replace-directive tree from the main controller module).
+- Implemented `cmd/scheduler/plugin/plugin.go` — unified `MeridianGPU` plugin covering all 6 scheduler framework extension points:
+  - **QueueSort**: priority-FIFO ordering via `meridian.dev/priority` + `meridian.dev/admitted-at`.
+  - **PreFilter**: gang label validation + cluster-wide GPU type feasibility check.
+  - **Filter**: GPU type match, GPU capacity (`nvidia.com/gpu`), health taint rejection.
+  - **Score/NormalizeScore**: composite fitScore + topoScore + healthScore weighted and rescaled to [0, MaxNodeScore].
+  - **Reserve/Unreserve**: per-gang tentative node assignment in CycleState ring.
+  - **Permit**: gang scheduling hold until `minAvailable` threshold, with configurable timeout.
+- Implemented internal packages (no framework dependency, used independently by control plane):
+  - `internal/scheduler/topology/`: topology label distance calculation (`NVLink` > `Rack` > `Zone`).
+  - `internal/scheduler/scoring/`: fitScore, healthScore, composite scoring helpers.
+  - `internal/scheduler/decisions/`: per-pod ring-buffer decision audit recorder for `meridianctl explain`.
+- Added `tools/patch-node-gpu/main.go`: patches GPU labels and extended resources on kind nodes.
+- Added `deploy/scheduler/deployment.yaml`: ServiceAccount, ClusterRoleBindings (`system:kube-scheduler`, `system:volume-scheduler`), ConfigMap with `KubeSchedulerConfiguration`, HA Deployment (2 replicas on control-plane nodes with leader election).
+- Added `deploy/scheduler/meridian-scheduler-config.yaml`: standalone scheduler config.
+- Added `cmd/scheduler/Dockerfile`: distroless multi-stage image build.
+
+**Verified:**
+- `go test ./internal/scheduler/decisions/...` — 7 tests PASS (incl. concurrency + memory bound) ✅
+- `go test ./internal/scheduler/scoring/...` — 3 tests PASS ✅
+- `go test ./internal/scheduler/topology/...` — 2 tests PASS ✅
+- `go test -C cmd/scheduler ./plugin/...` — 6 tests PASS (TestFitScore, TestHealthScore, TestDistanceAndTopoScore, TestQueueSort_Less, TestFilter, TestPermitAndReserve) ✅
+- `GOOS=linux GOARCH=amd64 go build -C cmd/scheduler -o ../../bin/meridian-scheduler-linux .` — 100 MiB ELF amd64 binary ✅
+- Commit `5e6730f`, pushed to `phase/04-scheduler-plugins` ✅
+
+**Next:** Phase 05 — Checkpoint / Preemption controller + `meridianctl explain`.
+
+---
