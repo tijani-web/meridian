@@ -11,7 +11,7 @@ Machine-readable resume state. Overwritten on every update.
 `phase/05-checkpoint-preemption`
 
 ## Last Green Commit
-Pending commit for Phase 05
+`646f53a` — feat(checkpoint): Phase 05 — checkpoint protocol and cooperative preemption
 
 ## Status
 `PHASE_05_COMPLETE — READY_FOR_PR`
