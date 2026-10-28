@@ -146,3 +146,40 @@ Append-only log. Each entry: date, phase, what was done, what was verified, comm
 **Next:** Phase 05 — Checkpoint / Preemption controller + `meridianctl explain`.
 
 ---
+
+## 2026-10-28 — Phase 05: Checkpoint Protocol & Cooperative Preemption
+
+**Done:**
+- Created `docs/design/checkpoint-protocol.md`: comprehensive design specification covering the cooperative checkpoint protocol, controller state machine, trainer-side library, straggler detection, and elastic restart contract.
+- Implemented `pkg/ckptclient`: trainer-side cooperative checkpoint client library in Go:
+  - Watches own pod annotations via in-cluster client / downward API (`meridian.dev/checkpoint-request`).
+  - Dispatches checkpoint requests to user callback, writes actual artifacts, and patches `meridian.dev/checkpoint-ack`.
+  - Emits `meridian.dev/checkpoint-heartbeat` and `meridian.dev/checkpoint-step` on training steps for straggler tracking.
+  - Exposes `ResumeFrom()` and `ResumeStep()` to inspect `MERIDIAN_RESUME_FROM` and `MERIDIAN_RESUME_STEP`.
+  - Comprehensive unit test suite in `pkg/ckptclient/ckptclient_test.go` (handler acks, idempotency, sequence advancement, heartbeat, direct ack).
+- Implemented `internal/checkpoint/coordinator.go`: controller-side coordinator:
+  - `RequestCheckpoint`: broadcasts `meridian.dev/checkpoint-request` and path annotations across all gang pods via merge patch.
+  - `EvaluateAcks`: evaluates ack prefixes, extracts paths/steps, verifies all gang members, and flags timeout expiration.
+  - `CompleteCheckpoint`: updates `LastCheckpointAt`, sets `CheckpointHealthy=True`, records coordinates.
+  - `HandleTimeout`: flags `CheckpointHealthy=False` with Reason `AckTimeout`, emits warning events.
+  - `InjectResumeEnv`: injects `MERIDIAN_RESUME_FROM` and `MERIDIAN_RESUME_STEP` into pod specs.
+  - `DetectStragglers`: identifies lagging gang pods based on heartbeat age.
+  - Unit tests in `internal/checkpoint/coordinator_test.go` without any fake clients.
+- Integrated checkpoint coordinator into controllers:
+  - `internal/controller/workload/workload_controller.go`: full `reconcileCheckpointing` loop managing dispatch, ack polling, complete -> preempt/running transitions, timeout force-eviction, and resume env injection in `buildGangPod`.
+  - `internal/controller/queue/queue_controller.go`: checkpoint-aware preemption in `initiateReclaim` requesting cooperative checkpoints on victim workloads before eviction.
+- Created `test/e2e/trainer/main.go`: small Go training binary using `ckptclient` that writes real checkpoint artifacts to disk and restores step continuity upon resume.
+- Added `test/envtest/checkpoint_preemption_test.go`: envtest integration suite running against real apiserver proving preempt -> checkpoint ack -> evict -> resume with env injection, plus ack timeout path.
+- Added `test/e2e/checkpoint_preemption_test.go`: trainer disk persistence & step continuity verification, plus cluster e2e harness.
+
+**Verified:**
+- `go test -v ./pkg/ckptclient/...` — 6 tests PASS ✅
+- `go test -v ./internal/checkpoint/...` — 5 tests PASS ✅
+- `go test -v ./internal/controller/...` — all controller unit tests PASS ✅
+- `go build ./test/e2e/trainer` — compiled cleanly ✅
+- `go test -v ./test/e2e/...` — trainer checkpoint continuity test PASS ✅
+- Zero `fake.NewClientBuilder` across all test packages outside tools, zero mocks or stubs in product code ✅
+
+**Next:** Phase 06 — Node health (NVML + DCGM-scrape, fault injector, health controller).
+
+---

@@ -3,6 +3,7 @@ package workload
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -18,6 +19,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	meridianv1alpha1 "github.com/tijani-web/meridian/api/v1alpha1"
+	"github.com/tijani-web/meridian/internal/checkpoint"
 	"github.com/tijani-web/meridian/internal/fsm"
 )
 
@@ -29,6 +31,14 @@ type WorkloadReconciler struct {
 	Scheme                  *runtime.Scheme
 	Recorder                record.EventRecorder
 	MaxConcurrentReconciles int
+	Coordinator             *checkpoint.Coordinator
+}
+
+func (r *WorkloadReconciler) getCoordinator() *checkpoint.Coordinator {
+	if r.Coordinator != nil {
+		return r.Coordinator
+	}
+	return checkpoint.NewCoordinator(r.Client, r.Recorder)
 }
 
 // +kubebuilder:rbac:groups=meridian.dev,resources=gpuworkloads,verbs=get;list;watch;create;update;patch;delete
@@ -296,7 +306,90 @@ func (r *WorkloadReconciler) reconcileRunning(ctx context.Context, w *meridianv1
 
 // reconcileCheckpointing coordinates cooperative checkpoint acknowledgments.
 func (r *WorkloadReconciler) reconcileCheckpointing(ctx context.Context, w *meridianv1alpha1.GPUWorkload) (ctrl.Result, error) {
-	// Handled cooperatively with checkpoint controller; if all acked, return to Running
+	pods, err := r.getWorkloadPods(ctx, w)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to fetch gang pods: %w", err)
+	}
+
+	coord := r.getCoordinator()
+
+	// If checkpoint has not been requested on the pods yet, dispatch the request
+	if w.Annotations == nil || w.Annotations[checkpoint.AnnotationCheckpointSeq] == "" {
+		isPreemption := w.Annotations != nil && w.Annotations[checkpoint.AnnotationPreemptRequested] == "true"
+		if err := coord.RequestCheckpoint(ctx, w, pods, isPreemption); err != nil {
+			return ctrl.Result{}, fmt.Errorf("dispatch checkpoint request: %w", err)
+		}
+		if err := r.Update(ctx, w); err != nil {
+			return ctrl.Result{}, fmt.Errorf("update workload annotations: %w", err)
+		}
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
+	}
+
+	status, summary, err := coord.EvaluateAcks(w, pods)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("evaluate checkpoint acks: %w", err)
+	}
+
+	switch status {
+	case checkpoint.AckStatusComplete:
+		orig := w.DeepCopy()
+		if err := coord.CompleteCheckpoint(ctx, w, summary); err != nil {
+			return ctrl.Result{}, fmt.Errorf("complete checkpoint: %w", err)
+		}
+
+		now := time.Now()
+		isPreemption := w.Annotations[checkpoint.AnnotationPreemptRequested] == "true"
+		// Clear active checkpoint sequence annotation so future cycles can run
+		delete(w.Annotations, checkpoint.AnnotationCheckpointSeq)
+		delete(w.Annotations, checkpoint.AnnotationCheckpointRequestedAt)
+		delete(w.Annotations, checkpoint.AnnotationPreemptRequested)
+		if err := r.Update(ctx, w); err != nil {
+			return ctrl.Result{}, fmt.Errorf("clear checkpoint request annotations: %w", err)
+		}
+
+		if isPreemption {
+			if err := fsm.ApplyTransition(&w.Status, fsm.EventPreempt, "CheckpointAckedPreempting", "Checkpoint completed; proceeding to pod eviction", now); err != nil {
+				return ctrl.Result{}, fmt.Errorf("FSM transition failed: %w", err)
+			}
+		} else {
+			if err := fsm.ApplyTransition(&w.Status, fsm.EventCheckpointAck, "CheckpointAcknowledged", "Periodic checkpoint succeeded; returning to running", now); err != nil {
+				return ctrl.Result{}, fmt.Errorf("FSM transition failed: %w", err)
+			}
+		}
+
+		if err := r.patchStatus(ctx, orig, w); err != nil {
+			return ctrl.Result{}, fmt.Errorf("patch workload status: %w", err)
+		}
+		return ctrl.Result{Requeue: true}, nil
+
+	case checkpoint.AckStatusTimeout:
+		orig := w.DeepCopy()
+		if err := coord.HandleTimeout(ctx, w, summary); err != nil {
+			return ctrl.Result{}, fmt.Errorf("handle checkpoint timeout: %w", err)
+		}
+
+		now := time.Now()
+		delete(w.Annotations, checkpoint.AnnotationCheckpointSeq)
+		delete(w.Annotations, checkpoint.AnnotationCheckpointRequestedAt)
+		delete(w.Annotations, checkpoint.AnnotationPreemptRequested)
+		if err := r.Update(ctx, w); err != nil {
+			return ctrl.Result{}, fmt.Errorf("clear checkpoint request annotations: %w", err)
+		}
+
+		// Force eviction / preemption on timeout
+		if err := fsm.ApplyTransition(&w.Status, fsm.EventPreempt, "CheckpointTimeoutPreempting", "Checkpoint timed out; forcing pod eviction", now); err != nil {
+			return ctrl.Result{}, fmt.Errorf("FSM transition failed: %w", err)
+		}
+
+		if err := r.patchStatus(ctx, orig, w); err != nil {
+			return ctrl.Result{}, fmt.Errorf("patch workload status: %w", err)
+		}
+		return ctrl.Result{Requeue: true}, nil
+
+	case checkpoint.AckStatusPending:
+		return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
+	}
+
 	return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
 }
 
@@ -456,6 +549,17 @@ func (r *WorkloadReconciler) buildGangPod(w *meridianv1alpha1.GPUWorkload, index
 			Name: AdmissionSchedulingGate,
 		})
 	}
+
+	// Inject resume environment variables if a previous checkpoint exists
+	var resumePath string
+	var resumeStep int64
+	if w.Annotations != nil {
+		resumePath = w.Annotations[checkpoint.AnnotationLastCheckpointPath]
+		if s := w.Annotations[checkpoint.AnnotationLastCheckpointStep]; s != "" {
+			resumeStep, _ = strconv.ParseInt(s, 10, 64)
+		}
+	}
+	checkpoint.InjectResumeEnv(&podSpec, resumePath, resumeStep)
 
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
