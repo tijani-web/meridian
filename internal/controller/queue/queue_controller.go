@@ -17,6 +17,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	meridianv1alpha1 "github.com/tijani-web/meridian/api/v1alpha1"
+	"github.com/tijani-web/meridian/internal/checkpoint"
+	"github.com/tijani-web/meridian/internal/fsm"
 )
 
 var log = logf.Log.WithName("queue-controller")
@@ -268,6 +270,21 @@ func (r *QueueReconciler) initiateReclaim(
 		var victimW meridianv1alpha1.GPUWorkload
 		if err := r.Get(ctx, client.ObjectKey{Namespace: v.Namespace, Name: v.Name}, &victimW); err == nil {
 			origVictim := victimW.DeepCopy()
+			if victimW.Spec.Checkpoint.Enabled && victimW.Status.Phase == meridianv1alpha1.WorkloadPhaseRunning {
+				if victimW.Annotations == nil {
+					victimW.Annotations = make(map[string]string)
+				}
+				victimW.Annotations[checkpoint.AnnotationPreemptRequested] = "true"
+				now := time.Now()
+				if err := fsm.ApplyTransition(&victimW.Status, fsm.EventRequestCheckpoint, "PreemptionReclaim",
+					fmt.Sprintf("Preempted by queue %s reclaim; initiating cooperative checkpoint", requestingQueue), now); err == nil {
+					_ = r.Update(ctx, &victimW)
+					_ = r.Status().Patch(ctx, &victimW, client.MergeFrom(origVictim))
+					r.Recorder.Event(&victimW, corev1.EventTypeNormal, "PreemptionCheckpointing",
+						fmt.Sprintf("Preempted by queue %s reclaim; requesting checkpoint before eviction", requestingQueue))
+					continue
+				}
+			}
 			victimW.Status.Phase = meridianv1alpha1.WorkloadPhasePreempting
 			_ = r.Status().Patch(ctx, &victimW, client.MergeFrom(origVictim))
 			r.Recorder.Event(&victimW, corev1.EventTypeWarning, "PreemptionInitiated",
