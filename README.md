@@ -10,42 +10,8 @@ Meridian is a Kubernetes-native GPU fleet control plane written in Go. It extend
 
 ## Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                        Control Plane                         │
-│                                                              │
-│  ┌─────────────────────────────────────────────────────┐     │
-│  │   Manager (controller-runtime, leader-elected HA)   │     │
-│  │  • GPUWorkload controller  (FSM, SSA, finalizers)   │     │
-│  │  • GPUQueue controller     (fair-share, borrow/lend)│     │
-│  │  • InferenceDeployment controller  (canary, rollback│     │
-│  │  • Node health controller  (NVML/DCGM, flap-damp)  │     │
-│  └─────────────────────────────────────────────────────┘     │
-│                                                              │
-│  ┌──────────────────────────┐  ┌─────────────────────────┐  │
-│  │  Meridian Scheduler      │  │  Node Agent (DaemonSet) │  │
-│  │  (second scheduler)      │  │  • XID / ECC scraping   │  │
-│  │  • Filter: GPU type,     │  │  • Node heartbeat       │  │
-│  │    topology, quota gate  │  │  • Label sync           │  │
-│  │  • Score: NVLink/rack    │  └─────────────────────────┘  │
-│  │  • Permit: gang sync     │                               │
-│  │  • Reserve: quota deduct │  ┌─────────────────────────┐  │
-│  │  • Decision recorder     │  │  Inference Router        │  │
-│  └──────────────────────────┘  │  • RoundRobin            │  │
-│                                │  • LeastQueue            │  │
-│                                │  • KVAware               │  │
-│                                │  • PrefixAffinity        │  │
-│                                │  • HTTP 429 load shedding│  │
-│                                └─────────────────────────┘  │
-└──────────────────────────────────────────────────────────────┘
-                          │
-              Kubernetes API Server
-                          │
-          ┌───────────────┴───────────────┐
-          │                               │
-   GPU Worker Nodes                 KWOK Simulated
-   (kind / real)                    Fleet Nodes
-```
+![Meridian Architecture](docs/images/architecture.svg)
+
 
 ### What is real vs simulated
 

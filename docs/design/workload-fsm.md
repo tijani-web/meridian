@@ -2,65 +2,26 @@
 
 ## State diagram
 
+```mermaid
+stateDiagram-v2
+    [*] --> Pending: Create Workload
+    Pending --> Queued: Queue Controller Admits (SchedulingGate Cleared)
+    Queued --> Admitted: Scheduler Accepts Pods & Deducts Quota
+    Admitted --> Scheduling: Permit Plugin WaitOnPermit (Gang Sync)
+    Scheduling --> Running: All Gang Members Bound
+    
+    Running --> Checkpointing: Preemption Requested (SIGTERM/Annotation)
+    Checkpointing --> Preempting: Checkpoint Ack Received
+    Preempting --> Queued: Pods Evicted / Quota Released
+    
+    Running --> Recovering: Node XID/ECC Fault Detected
+    Recovering --> Scheduling: Pods Re-admitted on Healthy Node
+    
+    Running --> Succeeded: All Pods Exit 0
+    Running --> Failed: Unrecoverable Error / Max Restarts Exhausted
+    Recovering --> Failed: Max Restarts Exhausted
 ```
-                     ┌─────────┐
-              create │         │
-  ──────────────────▶│ Pending │ (webhook sets Pending on creation)
-                     │         │
-                     └────┬────┘
-                          │ queue controller admits (removes SchedulingGate)
-                          ▼
-                     ┌─────────┐
-                     │ Queued  │ (gate removed, pods created but not scheduled)
-                     └────┬────┘
-                          │ scheduler accepts pods into scheduling cycle
-                          ▼
-                     ┌──────────┐
-                     │ Admitted │ (quota deducted, SchedulingGate cleared)
-                     └────┬─────┘
-                          │ Permit plugin's WaitOnPermit: all gang members Reserved
-                          ▼
-                     ┌────────────┐
-                     │ Scheduling │ (gang at Permit, waiting for all members)
-                     └─────┬──────┘
-                           │ all gang members Bound → pods reach ContainerCreating
-                           ▼
-                     ┌─────────┐
-                     │ Running │◀──────────────────────────────────────────────┐
-                     └────┬────┘                                               │
-                          │                                                    │
-             ┌────────────┼─────────────┐                                     │
-             │            │             │                                      │
-   preempt   ▼       XID fault         │ checkpoint done                      │
-  requested  │       detected          │                                      │
-             │            │             │                                      │
-             ▼            ▼             │                                      │
-        ┌─────────────┐  ┌──────────┐  │                                      │
-        │Checkpointing│  │ Faulted  │  │  (Faulted is not an explicit         │
-        └──────┬──────┘  └────┬─────┘  │   API phase; it's mapped from        │
-               │              │        │   node taint → preemption path)       │
-               │ ack received │        │                                       │
-               │ (annotation) │        │                                       │
-               ▼              ▼        │                                       │
-          ┌──────────┐  ┌────────────┐ │                                       │
-          │Preempting│  │ Recovering │─┘  (pods re-admitted on healthy node)  │
-          └──────┬───┘  └────────────┘                                        │
-                 │ pods evicted                                                │
-                 │ checkpoint path stored                                      │
-                 ▼                                                             │
-            ┌─────────┐  restartPolicy.maxRestarts not exhausted              │
-            │ Pending │─────────────────────────────────────────────────────-─┘
-            └────┬────┘
-                 │ maxRestarts exhausted
-                 ▼
-            ┌────────┐
-            │ Failed │
-            └────────┘
 
-            ┌───────────┐
-            │ Succeeded │  (all pods exited 0)
-            └───────────┘
-```
 
 ## FSM implementation
 

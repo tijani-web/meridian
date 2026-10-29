@@ -76,3 +76,10 @@ bench/results/**/.tmp/
 
 # golangci-lint cache
 .golangci-lint-cache/
+
+# Internal prompt, agent tracking, and interview preparation docs
+Meridian.md
+AGENTS.md
+STATE.md
+docs/INTERVIEW-NOTES.md
+docs/RESUME-BULLETS.md
