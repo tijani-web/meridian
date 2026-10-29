@@ -5,16 +5,16 @@ Machine-readable resume state. Overwritten on every update.
 ---
 
 ## Current Phase
-`phase/10-inference-router`
+`phase/11-observability`
 
 ## Current Branch
-`phase/10-inference-router`
+`phase/11-observability`
 
 ## Last Green Commit
-85866b1 (Merge pull request #8 from tijani-web/phase/09-inference-control-plane)
+7125471 (feat(router): Phase 10 — Inference Router, vLLM Emulator, Loadgen, Benchmarks)
 
 ## Status
-`PHASE_10_IN_PROGRESS`
+`PHASE_11_IN_PROGRESS`
 
 ## Open Issues
 (none)
@@ -23,9 +23,9 @@ Machine-readable resume state. Overwritten on every update.
 (none — autonomy mode active)
 
 ## Next 3 Actions
-1. Implement design doc `docs/design/router-strategies.md` and `tools/vllm-emu` OpenAI-compatible emulator with v0.9.2 vLLM metrics.
-2. Implement router core in `internal/router/` (4 strategies, streaming proxy, load shedding, metrics scraper) and `cmd/router/main.go`.
-3. Implement `tools/loadgen/`, execute §8.3 benchmark suite, commit raw results/plots, and pass DoD.
+1. Create `docs/design/observability.md` — metrics catalog, SLO definitions, and Grafana dashboard layout.
+2. Implement Prometheus custom metrics in `internal/metrics/` (workload admission latency, router TTFT histogram, KV cache utilization, gang scheduling latency, preemption counts).
+3. Create PrometheusRule CRs for SLO burn-rate alerts and Grafana dashboard ConfigMaps, commit and verify.
 
 ## Phase 08 DoD Checklist
 - [x] `bench/METHODOLOGY.md` updated with host environment, Go version, KWOK simulated node topologies, and statistical parameters
@@ -63,15 +63,15 @@ Machine-readable resume state. Overwritten on every update.
 - [x] `go vet` clean (exit code 0)
 
 ## Phase 10 DoD Checklist
-- [ ] `docs/design/router-strategies.md`: architectural design document for inference data plane, 4 strategies, metrics scraping, load shedding
-- [ ] `tools/vllm-emu`: standalone OpenAI-compatible streaming emulator exposing pinned v0.9.2 vLLM Prometheus metrics
-- [ ] `internal/router/`: core reverse proxy, SSE streaming passthrough, 4 routing strategies (`RoundRobin`, `LeastQueue`, `KVAware`, `PrefixAffinity`)
-- [ ] Load shedding with 429 and `Retry-After` header with priority classification
-- [ ] `cmd/router/`: standalone router binary
-- [ ] Streaming correctness tests: SSE token delivery, client cancellation propagation, replica failure handling
-- [ ] `tools/loadgen/`: synthetic Poisson load generator supporting shared prefix distributions
-- [ ] §8.3 Four-strategy benchmarks executed with committed raw CSV/JSON results and SVG comparison plots under `bench/results/` and `bench/plots/`
-- [ ] Zero mocks or stubs in product code, clean `go vet` and tests green
+- [x] `docs/design/router-strategies.md`: architectural design document for inference data plane, 4 strategies, metrics scraping, load shedding
+- [x] `tools/vllm-emu`: standalone OpenAI-compatible streaming emulator exposing pinned v0.9.2 vLLM Prometheus metrics
+- [x] `internal/router/`: core reverse proxy, SSE streaming passthrough, 4 routing strategies (`RoundRobin`, `LeastQueue`, `KVAware`, `PrefixAffinity`)
+- [x] Load shedding with 429 and `Retry-After` header with priority classification
+- [x] `cmd/router/`: standalone router binary
+- [x] Streaming correctness tests: SSE token delivery, client cancellation propagation, replica failure handling
+- [x] `tools/loadgen/`: synthetic Poisson load generator supporting shared prefix distributions
+- [x] §8.3 Four-strategy benchmarks executed with committed raw CSV/JSON results and SVG comparison plots under `bench/results/` and `bench/plots/`
+- [x] Zero mocks or stubs in product code, clean `go vet` and tests green
 
 ## Completed Phases
 - Phase 00 — Bootstrap (completed 2026-10-27)
@@ -84,9 +84,9 @@ Machine-readable resume state. Overwritten on every update.
 - Phase 07 — Explainability & Tracing (completed 2026-10-28)
 - Phase 08 — Scale & Scheduler Benchmarks (completed 2026-10-28)
 - Phase 09 — Inference Control Plane (completed 2026-10-29)
+- Phase 10 — Inference Router + Emulator + Loadgen + Benchmarks (completed 2026-10-29)
 
 ## Remaining Phases
-- Phase 10 — Inference Router + Emulator + Loadgen + Benchmarks (§6.7, §8.3)
 - Phase 11 — Observability: Metrics, Grafana Dashboards, SLOs, PrometheusRules (§6.9)
 - Phase 12 — Packaging, HA, Chaos: Helm, ArgoCD, Terraform, Leader Failover, Postmortem (§9)
 - Phase 13 — Documentation, Resume Bullets, and v0.1.0 Release (§11, §14)
@@ -102,3 +102,4 @@ Machine-readable resume state. Overwritten on every update.
 - phase-07-done
 - phase-08-done
 - phase-09-done
+- phase-10-done

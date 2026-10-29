@@ -331,3 +331,32 @@ Append-only log. Each entry: date, phase, what was done, what was verified, comm
 **Next:** Phase 10 โ€” Inference router + emulator + loadgen + benchmarks (ยง6.7, ยง8.3).
 
 ---
+
+## 2026-10-29 - Phase 10: Inference Router + vLLM Emulator + Loadgen + Benchmarks
+
+**Done:**
+- docs/design/router-strategies.md: 4 dispatch strategies spec (RoundRobin, LeastQueue, KVAware, PrefixAffinity with bounded-load consistent hashing).
+- tools/vllm-emu: OpenAI-compatible streaming emulator pinned to vLLM v0.9.2 Prometheus metrics.
+- internal/router/: types, scraper, 4 strategies, streaming reverse proxy (HTTP 429 load shedding), server with /routes.
+- cmd/router/main.go: standalone router CLI binary.
+- tools/loadgen/: open-loop Poisson load generator with shared prefix workload.
+- bench/cmd/run-router-benchmarks/: full ง8.3 benchmark runner with raw CSVs, JSON, SVG plots.
+- Fix: go vet unknown-verb in SVG fmt.Sprintf templates (width=100%%).
+
+**Benchmark Results [simulated vLLM replicas]:**
+- RoundRobin: TTFT p50=17.6ms p99=92.6ms Throughput=198.2 tok/s
+- LeastQueue:  TTFT p50=20.8ms p99=74.1ms Throughput=190.7 tok/s
+- KVAware:     TTFT p50=16.7ms p99=85.7ms Throughput=189.1 tok/s
+- PrefixAffinity: TTFT p50=17.4ms p99=133.5ms Throughput=189.6 tok/s
+
+**Verified:**
+- go vet all Phase 10 packages - clean (exit 0)
+- router_test.go: 7 tests PASS
+- loadgen tests: 3 tests PASS
+- vllm-emu tests: 4 tests PASS
+- Benchmark ran producing all CSV/JSON/SVG artifacts
+- PR #9 merged to main, tagged and pushed phase-10-done
+
+**Next:** Phase 11 - Observability: Metrics, Grafana Dashboards, SLOs, PrometheusRules (ง6.9).
+
+---
