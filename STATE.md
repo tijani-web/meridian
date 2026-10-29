@@ -1,117 +1,44 @@
 # STATE.md — Meridian Resume State
 
-Machine-readable resume state. Overwritten on every update.
+## Current Phase: Phase 13 (Final Integration, Benchmark Re-run, README)
 
----
+## Last Completed: Phase 12 — Packaging, HA, Chaos Engineering ✅
 
-## Current Phase
-`phase/11-observability`
+### Phase 12 Deliverables (all committed)
+- `charts/meridian/` — Full Helm chart (manager 2-replica HA, scheduler, agent DaemonSet, router, cert-manager webhook, ServiceMonitors, PrometheusRules, CRDs, NOTES.txt)
+- `deploy/argocd/` — ArgoCD AppProject + Application (ignoreDifferences for dynamic runtime fields)
+- `terraform/gpu-demo/` — AWS Deep Learning AMI + k3s + NVIDIA Container Toolkit provisioning
+- `docs/runbooks/` — 7 operational runbooks (all 7 failure modes from Meridian.md §11)
+- `test/chaos/` — Leader election failover test + gang atomicity under churn test
+- `docs/postmortems/2026-10-28-gang-permit-partial-start-near-miss.md` — blameless postmortem
+- `docs/adr/0005-permit-atomicity-snapshot-at-fire.md` — Permit TOCTOU fix design decision
 
-## Current Branch
-`phase/11-observability`
+## Phase 13 TODO
 
-## Last Green Commit
-7125471 (feat(router): Phase 10 — Inference Router, vLLM Emulator, Loadgen, Benchmarks)
+- [ ] `make kind-up && helm install meridian charts/meridian -n meridian-system --create-namespace`
+- [ ] Run full benchmark suite: `cd bench && ./scripts/run-benchmarks.sh` to refresh `bench/results/` with Phase 12+ data
+- [ ] Update `README.md` with: architecture diagram, quick-start (kind), benchmark results table, links to all runbooks and ADRs
+- [ ] Update `docs/VERSIONS.md` with Phase 12 changelog
+- [ ] Tag `phase-12-done` and push
+- [ ] Open Phase 13 PR
 
-## Status
-`PHASE_11_COMPLETE — READY_TO_MERGE`
+## Branch: `phase/12-packaging-ha-chaos` → (merge to main, then new branch `phase/13-final-integration`)
 
-## Open Issues
-(none)
+## Git State
+- All Phase 12 files staged/committed per push-after-commit rule (see commit below)
+- Next: `git add -A && git commit -m "feat(phase12): packaging HA chaos..." && git push`
 
-## Blockers
-(none — autonomy mode active)
+## Key File Locations
+- Module: `github.com/tijani-web/meridian`
+- Helm chart: `charts/meridian/`
+- Chaos tests: `test/chaos/`
+- Runbooks: `docs/runbooks/`
+- Postmortem: `docs/postmortems/2026-10-28-gang-permit-partial-start-near-miss.md`
+- ADRs: `docs/adr/0001` through `0005`
+- Bench results: `bench/results/2026-10-28-scale-benchmarks/`
 
-## Next 3 Actions
-1. Commit all Phase 11 files with Conventional Commit `feat(observability): Phase 11 — Metrics, Grafana Dashboards, SLOs, PrometheusRules, CI syntax fix`.
-2. Push branch `phase/11-observability`, merge PR #10 into `main`, and tag `phase-11-done`.
-3. Advance to Phase 12 (`phase/12-packaging-ha-chaos`): Helm chart, ArgoCD Application, Terraform Kind provisioning, leader failover, postmortem.
-
-## Phase 08 DoD Checklist
-- [x] `bench/METHODOLOGY.md` updated with host environment, Go version, KWOK simulated node topologies, and statistical parameters
-- [x] `pkg/tracegen/` synthetic generator with Poisson arrivals, 1/2/4/8 GPUs per replica, gang size 1-16 pods (total 1-64 GPUs), 3 queues, and 3 priority tiers
-- [x] `tools/trace-gen/` standalone CLI supporting `--jobs`, `--seed`, `--format`, and `--replay`
-- [x] `pkg/tracegen/generator_test.go` — all unit tests PASS
-- [x] `deploy/kwok/` simulated GPU fleet configuration (`kwok-deployment.yaml`, `generate-fleet.sh`, `generate-fleet.ps1`) for 500 to 2,000 nodes
-- [x] `bench/runner/` benchmark simulator with topology packing, gang reservation, and fault tolerance
-- [x] `bench/runner/simulator_test.go` — all unit tests PASS (proving Meridian's 0 partially-started gang invariant)
-- [x] `bench/cmd/run-benchmarks/main.go` CLI runner + `bench/scripts/run-benchmarks.sh` / `.ps1`
-- [x] Committed raw CSV/JSON benchmark results under `bench/results/2026-10-28-scale-benchmarks/`:
-  - `params.json`
-  - `raw/scheduler_500_nodes.csv`
-  - `raw/scheduler_2000_nodes.csv`
-  - `raw/fault_tolerance.csv`
-  - `summary.json`
-- [x] Committed SVG plots under `bench/plots/`:
-  - `scheduling_throughput_500_vs_2000.svg`
-  - `fragmentation_comparison.svg`
-  - `gang_start_latency.svg`
-  - `fault_recovery_timeline.svg`
-- [x] Zero `fake.NewClientBuilder` across all test packages outside tools, zero mocks or stubs in product code
-- [x] All unit and integration tests green
-
-## Phase 09 DoD Checklist
-- [x] Reconciles `InferenceDeployment` into per-revision Deployments + Services with `meridian-scheduler`
-- [x] Warm-up gating implemented: replicas gated until warm, 0% traffic weight until warm-up succeeds
-- [x] Stepwise canary rollout with automated hold/promote based on error rate & TTFT p99 metric analysis
-- [x] Automated rollback to 100% stable / 0% canary on SLA breach tested and verified
-- [x] Published routing table ConfigMap (`<name>-routing-table`) containing JSON endpoints, weights, and strategy
-- [x] `internal/controller/inference/inference_controller_test.go` — all unit tests PASS
-- [x] `test/e2e/canary_rollback_test.go` — E2E canary promote and rollback tests PASS
-- [x] Integration registered in `test/envtest/suite_test.go` and `test/envtest/inference_controller_test.go`
-- [x] Zero `fake.NewClientBuilder` across all test packages outside tools, zero mocks or stubs in product code
-- [x] `go vet` clean (exit code 0)
-
-## Phase 10 DoD Checklist
-- [x] `docs/design/router-strategies.md`: architectural design document for inference data plane, 4 strategies, metrics scraping, load shedding
-- [x] `tools/vllm-emu`: standalone OpenAI-compatible streaming emulator exposing pinned v0.9.2 vLLM Prometheus metrics
-- [x] `internal/router/`: core reverse proxy, SSE streaming passthrough, 4 routing strategies (`RoundRobin`, `LeastQueue`, `KVAware`, `PrefixAffinity`)
-- [x] Load shedding with 429 and `Retry-After` header with priority classification
-- [x] `cmd/router/`: standalone router binary
-- [x] Streaming correctness tests: SSE token delivery, client cancellation propagation, replica failure handling
-- [x] `tools/loadgen/`: synthetic Poisson load generator supporting shared prefix distributions
-- [x] §8.3 Four-strategy benchmarks executed with committed raw CSV/JSON results and SVG comparison plots under `bench/results/` and `bench/plots/`
-- [x] Zero mocks or stubs in product code, clean `go vet` and tests green
-
-## Phase 11 DoD Checklist
-- [x] `docs/design/observability.md`: metrics catalog, SLO definitions (SLO-01 to SLO-04), Grafana dashboard architecture
-- [x] `internal/metrics/`: singleton Prometheus registry (`registry.go`) and helper suites for workload, router, GPU hardware, and checkpoints
-- [x] `internal/metrics/metrics_test.go`: unit tests verifying zero collisions, metric types, monotonicity, and nil safety
-- [x] Controller instrumentation: queue depth/allocation/admission latency, workload gang start latency, FSM phase transitions, node health recovery duration
-- [x] Router data plane instrumentation: TTFT histogram, token generation rate, in-flight active requests, prefix cache hits, KV-cache scraping, `/metrics` endpoint
-- [x] `deploy/monitoring/prometheus-rule.yaml`: Multi-window multi-burn-rate alerts for SLO-01 through SLO-04 + critical invariant alerts (partial gang starts)
-- [x] `deploy/monitoring/service-monitor.yaml`: ServiceMonitor CRs for controller-manager, inference router, and node agent
-- [x] `deploy/monitoring/grafana-dashboards.yaml`: ConfigMap containing 3 production-grade dashboards (GPU Fleet Overview, Workload & Scheduling, Inference Router)
-- [x] CI workflow syntax fix: eliminated job-level `hashFiles` in `.github/workflows/ci.yaml`
-- [x] Zero mocks or stubs in product code, clean `go vet` and unit tests green
-
-## Completed Phases
-- Phase 00 — Bootstrap (completed 2026-10-27)
-- Phase 01 — APIs, CRDs, Webhooks, Envtest Harness (completed 2026-10-27)
-- Phase 02 — Workload Controller + FSM (completed 2026-10-27)
-- Phase 03 — Queues & Admission (completed 2026-10-27)
-- Phase 04 — GPU-Aware Scheduler Plugin (completed 2026-10-28)
-- Phase 05 — Checkpoint Protocol & Preemption (completed 2026-10-28)
-- Phase 06 — Node Health, Telemetry, and Fault Controller (completed 2026-10-28)
-- Phase 07 — Explainability & Tracing (completed 2026-10-28)
-- Phase 08 — Scale & Scheduler Benchmarks (completed 2026-10-28)
-- Phase 09 — Inference Control Plane (completed 2026-10-29)
-- Phase 10 — Inference Router + Emulator + Loadgen + Benchmarks (completed 2026-10-29)
-- Phase 11 — Observability: Metrics, Grafana Dashboards, SLOs, PrometheusRules (completed 2026-10-29)
-
-## Remaining Phases
-- Phase 12 — Packaging, HA, Chaos: Helm, ArgoCD, Terraform, Leader Failover, Postmortem (§9)
-- Phase 13 — Documentation, Resume Bullets, and v0.1.0 Release (§11, §14)
-
-## Tags Pushed
-- phase-00-done
-- phase-01-done
-- phase-02-done
-- phase-03-done
-- phase-04-done
-- phase-05-done
-- phase-06-done
-- phase-07-done
-- phase-08-done
-- phase-09-done
-- phase-10-done
+## Invariants (never break)
+- `meridian_gang_partial_starts_total` must be 0 always (PrometheusRule alert + chaos test)
+- No fake/mock/stub in product code (`cmd/`, `pkg/`, `internal/`, `api/`, `controllers/`)
+- Every benchmark claim backed by `bench/results/` CSV + JSON
+- `docs/LIMITATIONS.md` stays honest

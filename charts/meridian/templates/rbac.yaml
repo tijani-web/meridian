@@ -1,0 +1,178 @@
+{{- if .Values.rbac.create -}}
+---
+# ============================================================
+# Manager ClusterRole & Binding
+# ============================================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "meridian.fullname" . }}-manager-role
+  labels:
+    {{- include "meridian.labels" . | nindent 4 }}
+rules:
+  # Pods, ConfigMaps, Services management by controllers
+  - apiGroups: [""]
+    resources: ["pods", "configmaps", "services"]
+    verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+  # Event reporting
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  # Node inspection and condition patching by health controller
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "patch", "update", "watch"]
+  - apiGroups: [""]
+    resources: ["nodes/status"]
+    verbs: ["get", "patch", "update"]
+  # Deployments for inference revisions
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+  # Leader election coordination leases
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["create", "get", "list", "update", "watch"]
+  # Meridian Custom Resources
+  - apiGroups: ["meridian.dev"]
+    resources: ["gpuqueues", "gpuworkloads", "inferencedeployments"]
+    verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+  - apiGroups: ["meridian.dev"]
+    resources: ["gpuqueues/status", "gpuworkloads/status", "inferencedeployments/status"]
+    verbs: ["get", "patch", "update"]
+  - apiGroups: ["meridian.dev"]
+    resources: ["gpuworkloads/finalizers", "gpuqueues/finalizers", "inferencedeployments/finalizers"]
+    verbs: ["update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "meridian.fullname" . }}-manager-binding
+  labels:
+    {{- include "meridian.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "meridian.fullname" . }}-manager-role
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "meridian.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+
+---
+# ============================================================
+# Scheduler ClusterRole & Binding
+# ============================================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "meridian.fullname" . }}-scheduler-role
+  labels:
+    {{- include "meridian.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["pods/binding"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["create", "get", "list", "update", "watch"]
+  - apiGroups: ["meridian.dev"]
+    resources: ["gpuqueues", "gpuworkloads"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "meridian.fullname" . }}-scheduler-binding
+  labels:
+    {{- include "meridian.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "meridian.fullname" . }}-scheduler-role
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "meridian.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+
+---
+# ============================================================
+# Agent ClusterRole & Binding
+# ============================================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "meridian.fullname" . }}-agent-role
+  labels:
+    {{- include "meridian.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "patch", "update"]
+  - apiGroups: [""]
+    resources: ["nodes/status"]
+    verbs: ["get", "patch", "update"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "meridian.fullname" . }}-agent-binding
+  labels:
+    {{- include "meridian.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "meridian.fullname" . }}-agent-role
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "meridian.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+
+---
+# ============================================================
+# Router ClusterRole & Binding
+# ============================================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "meridian.fullname" . }}-router-role
+  labels:
+    {{- include "meridian.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["discovery.k8s.io"]
+    resources: ["endpointslices"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["services", "pods", "configmaps"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["meridian.dev"]
+    resources: ["inferencedeployments"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "meridian.fullname" . }}-router-binding
+  labels:
+    {{- include "meridian.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "meridian.fullname" . }}-router-role
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "meridian.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

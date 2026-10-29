@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "meridian.fullname" . }}-agent
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "meridian.labels" . | nindent 4 }}
+    app.kubernetes.io/component: agent
+spec:
+  selector:
+    matchLabels:
+      {{- include "meridian.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: agent
+  template:
+    metadata:
+      labels:
+        {{- include "meridian.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: agent
+    spec:
+      serviceAccountName: {{ include "meridian.serviceAccountName" . }}
+      {{- if .Values.agent.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.agent.nodeSelector | nindent 8 }}
+      {{- end }}
+      tolerations:
+        - key: "meridian.dev/gpu-unhealthy"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "meridian.dev/gpu-unhealthy"
+          operator: "Exists"
+          effect: "NoExecute"
+        - key: "nvidia.com/gpu"
+          operator: "Exists"
+          effect: "NoSchedule"
+      containers:
+        - name: agent
+          image: "{{ .Values.image.registry }}/meridian-agent:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /meridian-agent
+          args:
+            - --health-source={{ .Values.agent.healthSource }}
+            - --dcgm-endpoint={{ .Values.agent.dcgmEndpoint }}
+            - --unhealthy-threshold={{ .Values.agent.flapDamping.unhealthyThreshold }}
+            - --recovery-threshold={{ .Values.agent.flapDamping.recoveryThreshold }}
+            - --evaluation-window={{ .Values.agent.flapDamping.evaluationWindow }}
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          ports:
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.agent.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL

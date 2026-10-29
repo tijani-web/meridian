@@ -1,0 +1,145 @@
+{{- if and .Values.monitoring.enabled .Values.monitoring.prometheusRule.enabled -}}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "meridian.fullname" . }}-slo-rules
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "meridian.labels" . | nindent 4 }}
+    role: alert-rules
+spec:
+  groups:
+    - name: meridian.slo.ttft
+      rules:
+        - alert: MeridianRouterTTFTSLOBreachCritical
+          expr: |
+            (
+              sum(rate(meridian_router_ttft_seconds_bucket{le="0.15"}[5m]))
+              /
+              sum(rate(meridian_router_ttft_seconds_count[5m]))
+            ) < 0.99
+            and
+            (
+              sum(rate(meridian_router_ttft_seconds_bucket{le="0.15"}[1h]))
+              /
+              sum(rate(meridian_router_ttft_seconds_count[1h]))
+            ) < 0.99
+          for: 2m
+          labels:
+            severity: critical
+            slo: "SLO-01"
+            tier: data-plane
+          annotations:
+            summary: "Critical 14x burn-rate on inference router TTFT p99 < 150ms SLO"
+            description: "Over 1% of requests exceeded 150ms TTFT during the last 5m and 1h windows."
+
+        - alert: MeridianRouterTTFTSLOBreachWarning
+          expr: |
+            (
+              sum(rate(meridian_router_ttft_seconds_bucket{le="0.15"}[30m]))
+              /
+              sum(rate(meridian_router_ttft_seconds_count[30m]))
+            ) < 0.99
+            and
+            (
+              sum(rate(meridian_router_ttft_seconds_bucket{le="0.15"}[6h]))
+              /
+              sum(rate(meridian_router_ttft_seconds_count[6h]))
+            ) < 0.99
+          for: 10m
+          labels:
+            severity: warning
+            slo: "SLO-01"
+            tier: data-plane
+          annotations:
+            summary: "Warning 6x burn-rate on inference router TTFT p99 < 150ms SLO"
+            description: "Elevated TTFT observed over the 30m and 6h windows."
+
+    - name: meridian.slo.admission
+      rules:
+        - alert: MeridianAdmissionLatencySLOBreach
+          expr: |
+            histogram_quantile(0.99, sum(rate(meridian_workload_admission_latency_seconds_bucket[15m])) by (le, queue)) > 0.5
+          for: 5m
+          labels:
+            severity: warning
+            slo: "SLO-02"
+            tier: control-plane
+          annotations:
+            summary: "Workload admission latency p99 > 500ms on queue {{`{{ $labels.queue }}`}}"
+            description: "Workload submission to scheduling gate release p99 latency is elevated."
+
+    - name: meridian.slo.gang
+      rules:
+        - alert: MeridianGangStartLatencySLOBreach
+          expr: |
+            histogram_quantile(0.99, sum(rate(meridian_gang_start_latency_seconds_bucket[30m])) by (le, queue)) > 30.0
+          for: 5m
+          labels:
+            severity: warning
+            slo: "SLO-03"
+            tier: scheduling
+          annotations:
+            summary: "Gang start latency p99 > 30s on queue {{`{{ $labels.queue }}`}}"
+            description: "Gate release to all pods running latency p99 exceeds 30s."
+
+    - name: meridian.slo.availability
+      rules:
+        - alert: MeridianRouterAvailabilitySLOBreach
+          expr: |
+            (
+              sum(rate(meridian_router_request_total{result=~"bad_gateway_502|error_500"}[5m]))
+              /
+              sum(rate(meridian_router_request_total[5m]))
+            ) > 0.001
+          for: 2m
+          labels:
+            severity: critical
+            slo: "SLO-04"
+            tier: data-plane
+          annotations:
+            summary: "Inference router error rate exceeds 0.1% SLO budget"
+            description: "Router 5xx error rate is elevated over 5m."
+
+    - name: meridian.operational.invariants
+      rules:
+        - alert: MeridianGangPartialStartInvariantViolation
+          expr: sum(meridian_gang_partial_starts_total) > 0
+          for: 0s
+          labels:
+            severity: critical
+            tier: core-invariant
+          annotations:
+            summary: "CRITICAL INVARIANT VIOLATED: Partial gang start detected"
+            description: "Meridian all-or-nothing gang scheduling guarantee was breached on queue {{`{{ $labels.queue }}`}}."
+
+        - alert: MeridianGPUFatalXIDDetected
+          expr: sum(rate(meridian_gpu_xid_events_total{severity="fatal"}[5m])) by (node, gpu, xid) > 0
+          for: 0s
+          labels:
+            severity: critical
+            tier: hardware
+          annotations:
+            summary: "Fatal NVIDIA GPU XID error on node {{`{{ $labels.node }}`}} (GPU: {{`{{ $labels.gpu }}`}}, XID: {{`{{ $labels.xid }}`}})"
+            description: "Fatal GPU hardware/driver failure detected; node controller initiated workload eviction."
+
+        - alert: MeridianGPUECCDoubleBitError
+          expr: sum(rate(meridian_gpu_ecc_dbe_total[5m])) by (node, gpu) > 0
+          for: 0s
+          labels:
+            severity: critical
+            tier: hardware
+          annotations:
+            summary: "Uncorrectable double-bit ECC memory error on node {{`{{ $labels.node }}`}}, GPU {{`{{ $labels.gpu }}`}}"
+            description: "Uncorrectable memory corruption requires immediate node taint and hardware replacement."
+
+        - alert: MeridianHighKVCachePressure
+          expr: meridian_router_kv_cache_usage > 0.90
+          for: 1m
+          labels:
+            severity: warning
+            tier: data-plane
+          annotations:
+            summary: "Inference replica {{`{{ $labels.replica }}`}} KV-cache utilization > 90%"
+            description: "Replica KV cache usage is high; load-shedding or autoscaling imminent."
+{{- end }}

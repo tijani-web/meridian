@@ -1,0 +1,71 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: meridian-control-plane
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: meridian
+    app.kubernetes.io/part-of: meridian
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: meridian
+  source:
+    repoURL: "https://github.com/tijani-web/meridian.git"
+    targetRevision: HEAD
+    path: charts/meridian
+    helm:
+      releaseName: meridian
+      valuesObject:
+        manager:
+          replicaCount: 2
+          leaderElection:
+            enabled: true
+        scheduler:
+          replicaCount: 2
+        router:
+          replicaCount: 2
+        monitoring:
+          enabled: true
+          serviceMonitor:
+            enabled: true
+          prometheusRule:
+            enabled: true
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: meridian-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  # Ignore controller-mutated status fields and dynamic runtime annotations
+  # to prevent ArgoCD OutOfSync false positives.
+  ignoreDifferences:
+    - group: meridian.dev
+      kind: GPUQueue
+      jsonPointers:
+        - /status
+    - group: meridian.dev
+      kind: GPUWorkload
+      jsonPointers:
+        - /status
+        - /metadata/annotations/meridian.dev~1checkpoint-ack
+        - /metadata/annotations/meridian.dev~1checkpoint-requested-at
+        - /metadata/annotations/meridian.dev~1assigned-nodes
+    - group: meridian.dev
+      kind: InferenceDeployment
+      jsonPointers:
+        - /status
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /status

@@ -1,0 +1,27 @@
+{{- if index .Values "cert-manager" "enabled" -}}
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ include "meridian.fullname" . }}-selfsigned-issuer
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "meridian.labels" . | nindent 4 }}
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "meridian.fullname" . }}-webhook-cert
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "meridian.labels" . | nindent 4 }}
+spec:
+  dnsNames:
+    - {{ include "meridian.fullname" . }}-webhook-service.{{ .Release.Namespace }}.svc
+    - {{ include "meridian.fullname" . }}-webhook-service.{{ .Release.Namespace }}.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: {{ include "meridian.fullname" . }}-selfsigned-issuer
+  secretName: {{ include "meridian.fullname" . }}-webhook-cert
+{{- end }}

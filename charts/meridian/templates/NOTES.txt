@@ -1,0 +1,56 @@
+{{- $release := .Release.Name }}
+{{- $ns := .Release.Namespace }}
+Thank you for installing Meridian {{ .Chart.AppVersion }}!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Meridian GPU Fleet Control Plane
+  Release:   {{ $release }}
+  Namespace: {{ $ns }}
+  Version:   {{ .Chart.AppVersion }}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Verify all components are Running:
+
+   kubectl get pods -n {{ $ns }} -l app.kubernetes.io/instance={{ $release }}
+
+2. Check the manager has acquired the leader lease:
+
+   kubectl get lease meridian-manager -n {{ $ns }} -o jsonpath='{.spec.holderIdentity}'
+
+3. Submit your first GPUWorkload:
+
+   kubectl apply -f https://raw.githubusercontent.com/tijani-web/meridian/main/config/samples/gpuworkload_sample.yaml
+
+4. Watch queue admissions:
+
+   kubectl get gpuqueues,gpuworkloads -A
+
+5. Access the Meridian router:
+{{- if .Values.router.enabled }}
+   kubectl port-forward -n {{ $ns }} svc/{{ include "meridian.fullname" . }}-router 8080:{{ .Values.router.service.port }}
+   curl http://localhost:8080/healthz
+{{- else }}
+   Router is disabled in this release. Set router.enabled=true to enable.
+{{- end }}
+
+{{- if .Values.monitoring.enabled }}
+
+6. Prometheus metrics are available via ServiceMonitor.
+   Import the bundled Grafana dashboard:
+     docs/grafana-dashboard.json
+
+{{- end }}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ⚠  Operational Notes
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- CRDs are included in charts/meridian/crds/ and applied automatically.
+- cert-manager is required for webhook TLS (cert-manager.io/v1 Certificate).
+  Ensure cert-manager is installed before upgrading Meridian.
+- Leader election uses a {{ $ns }}/meridian-manager Lease.
+  Do NOT reduce manager replicas below 2 in production.
+- Runbooks are available at docs/runbooks/ for all known failure modes.
+- See docs/LIMITATIONS.md for measured vs. claimed capabilities.
+
+Full documentation: https://github.com/tijani-web/meridian
