@@ -13,38 +13,29 @@ In multi-node distributed GPU training, a single GPU hardware anomaly (e.g. PCIe
 
 ## 2. Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      GPU Worker Node                        │
-│                                                             │
-│  ┌──────────────────────┐      ┌─────────────────────────┐  │
-│  │   dcgm-exporter      │      │     Local Hardware      │  │
-│  │   (:9400/metrics)    │      │     (NVML / Sysfs)      │  │
-│  └──────────┬───────────┘      └────────────┬────────────┘  │
-│             │                               │               │
-│             ▼                               ▼               │
-│    ┌──────────────────────────────────────────────┐         │
-│    │            Meridian Health Agent             │         │
-│    │  - DCGM Prometheus Scraper                  │         │
-│    │  - NVML Source                               │         │
-│    │  - Flap Damping & Hysteresis Filter          │         │
-│    └──────────────────────┬───────────────────────┘         │
-└───────────────────────────┼─────────────────────────────────┘
-                            │ Patches Taint & Condition
-                            ▼
-┌─────────────────────────────────────────────────────────────┐
-│                  Kubernetes Control Plane                   │
-│                                                             │
-│  Node:                                                      │
-│    Condition: meridian.dev/GPUHealthy = False               │
-│    Taint: meridian.dev/gpu-unhealthy:NoExecute              │
-│                                                             │
-│  Health Controller:                                         │
-│    1. Watches Node condition & taints                       │
-│    2. Finds gang pods on failed node via IndexPodNode       │
-│    3. Workload FSM: Running -> Recovering (Generation++)    │
-│    4. Reschedules gang on healthy nodes from checkpoint     │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Node["GPU Worker Node"]
+        direction TB
+        DCGM["dcgm-exporter<br/>(:9400/metrics)"]
+        NVML["Local Hardware<br/>(NVML / Sysfs)"]
+        
+        Agent["Meridian Health Agent<br/>• DCGM Prometheus Scraper<br/>• NVML Source<br/>• Flap Damping &amp; Hysteresis Filter"]
+        
+        DCGM --> Agent
+        NVML --> Agent
+    end
+
+    subgraph K8s["Kubernetes Control Plane"]
+        direction TB
+        NodeObj["Node Resource Status<br/>• Condition: meridian.dev/GPUHealthy = False<br/>• Taint: meridian.dev/gpu-unhealthy:NoExecute"]
+        
+        HealthCtrl["Health Controller<br/>1. Watches Node condition &amp; taints<br/>2. Discovers gang pods via IndexPodNode<br/>3. Drives FSM: Running ➔ Recovering (Generation++)<br/>4. Reschedules gang on healthy nodes from checkpoint"]
+        
+        NodeObj --> HealthCtrl
+    end
+
+    Agent -->|Patches Taint &amp; Condition| NodeObj
 ```
 
 ---

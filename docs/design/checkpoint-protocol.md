@@ -28,24 +28,16 @@ All communication between the controller and trainer pods uses Kubernetes pod an
 
 ## 3. Protocol State Machine
 
-```
-Running
-  │
-  ▼  controller sets checkpoint-request annotation
-Checkpointing ──────────────────────────────────────────────────┐
-  │                                                             │ ackTimeout exceeded
-  │  all gang members set checkpoint-ack                        ▼
-  ▼                                          ForceEvict + CheckpointHealthy=False
-AcksComplete
-  │
-  ▼  controller evicts pods (delete with GracePeriod=0 for preemption)
-Evicted
-  │
-  ▼  queue controller re-admits (may wait for capacity)
-Recovering
-  │
-  ▼  new pods scheduled; MERIDIAN_RESUME_FROM env injected
-Running (next generation)
+```mermaid
+stateDiagram-v2
+    [*] --> Running
+    Running --> Checkpointing: Controller sets checkpoint-request annotation
+    Checkpointing --> AcksComplete: All gang members set checkpoint-ack
+    Checkpointing --> ForceEvict: ackTimeout exceeded (CheckpointHealthy=False)
+    AcksComplete --> Evicted: Controller evicts pods (GracePeriod=0)
+    ForceEvict --> Evicted: Force delete pods
+    Evicted --> Recovering: Queue controller re-admits
+    Recovering --> Running: New pods scheduled (MERIDIAN_RESUME_FROM injected)
 ```
 
 ---
@@ -157,23 +149,35 @@ Policy (conservative, documented):
 
 ## 8. Sequence Diagram (Happy Path)
 
-```
-Controller                    Pod-0                Pod-1
-    │                           │                    │
-    │── annotate checkpoint-request ──────────────>  │
-    │── annotate checkpoint-request ──────────────────────────> │
-    │                           │                    │
-    │                      [writes ckpt to PVC]  [writes ckpt to PVC]
-    │                           │                    │
-    │<── checkpoint-ack ─────── │                    │
-    │<── checkpoint-ack ──────────────────────────── │
-    │                           │                    │
-    │── delete pod ──────────>  │  (GracePeriod=0)
-    │── delete pod ──────────────────────────────>   │
-    │                           │                    │
-    │   [queue re-admits, new pods scheduled]
-    │── new Pod-0 with MERIDIAN_RESUME_FROM env
-    │── new Pod-1 with MERIDIAN_RESUME_FROM env
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Controller as Meridian Controller
+    participant Pod0 as Worker Pod-0
+    participant Pod1 as Worker Pod-1
+    participant Storage as Shared Storage (PVC)
+
+    Controller->>Pod0: Annotate checkpoint-request (generation:seq)
+    Controller->>Pod1: Annotate checkpoint-request (generation:seq)
+    
+    par Save Model State
+        Pod0->>Storage: Write weights & optimizer state
+    and
+        Pod1->>Storage: Write weights & optimizer state
+    end
+
+    Pod0->>Controller: Annotate checkpoint-ack (path)
+    Pod1->>Controller: Annotate checkpoint-ack (path)
+
+    Note over Controller: All gang acks received
+
+    Controller->>Pod0: Delete Pod (GracePeriod=0)
+    Controller->>Pod1: Delete Pod (GracePeriod=0)
+
+    Note over Controller: Queue re-admits & reschedules gang
+
+    Controller->>Pod0: Spawn new Pod-0 with MERIDIAN_RESUME_FROM
+    Controller->>Pod1: Spawn new Pod-1 with MERIDIAN_RESUME_FROM
 ```
 
 ---
