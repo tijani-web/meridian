@@ -7,6 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	meridianv1alpha1 "github.com/tijani-web/meridian/api/v1alpha1"
+	"github.com/tijani-web/meridian/internal/metrics"
 )
 
 // MaxHistoryEntries defines the upper bound of retained transition records in status.history.
@@ -279,6 +280,7 @@ func ApplyTransition(
 	}
 
 	status.Phase = rule.TargetPhase
+	metrics.Default().RecordPhaseTransition(string(from), string(rule.TargetPhase))
 
 	// Update phase-specific timestamps
 	switch rule.TargetPhase {

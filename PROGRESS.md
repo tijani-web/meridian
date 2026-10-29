@@ -331,3 +331,57 @@ Append-only log. Each entry: date, phase, what was done, what was verified, comm
 **Next:** Phase 10 โ€” Inference router + emulator + loadgen + benchmarks (ยง6.7, ยง8.3).
 
 ---
+
+## 2026-10-29 - Phase 10: Inference Router + vLLM Emulator + Loadgen + Benchmarks
+
+**Done:**
+- docs/design/router-strategies.md: 4 dispatch strategies spec (RoundRobin, LeastQueue, KVAware, PrefixAffinity with bounded-load consistent hashing).
+- tools/vllm-emu: OpenAI-compatible streaming emulator pinned to vLLM v0.9.2 Prometheus metrics.
+- internal/router/: types, scraper, 4 strategies, streaming reverse proxy (HTTP 429 load shedding), server with /routes.
+- cmd/router/main.go: standalone router CLI binary.
+- tools/loadgen/: open-loop Poisson load generator with shared prefix workload.
+- bench/cmd/run-router-benchmarks/: full ง8.3 benchmark runner with raw CSVs, JSON, SVG plots.
+- Fix: go vet unknown-verb in SVG fmt.Sprintf templates (width=100%%).
+
+**Benchmark Results [simulated vLLM replicas]:**
+- RoundRobin: TTFT p50=17.6ms p99=92.6ms Throughput=198.2 tok/s
+- LeastQueue:  TTFT p50=20.8ms p99=74.1ms Throughput=190.7 tok/s
+- KVAware:     TTFT p50=16.7ms p99=85.7ms Throughput=189.1 tok/s
+- PrefixAffinity: TTFT p50=17.4ms p99=133.5ms Throughput=189.6 tok/s
+
+**Verified:**
+- go vet all Phase 10 packages - clean (exit 0)
+- router_test.go: 7 tests PASS
+- loadgen tests: 3 tests PASS
+- vllm-emu tests: 4 tests PASS
+- Benchmark ran producing all CSV/JSON/SVG artifacts
+- PR #9 merged to main, tagged and pushed phase-10-done
+
+**Next:** Phase 11 - Observability: Metrics, Grafana Dashboards, SLOs, PrometheusRules (ง6.9).
+
+---
+
+## 2026-10-29 - Phase 11: Observability (Metrics, Grafana Dashboards, SLOs, PrometheusRules)
+
+**Done:**
+- docs/design/observability.md: full metrics catalog, SLO definitions (SLO-01 to SLO-04), multi-window burn-rate alert formulas, and 3 Grafana dashboard architectures.
+- internal/metrics/: singleton Prometheus registry (registry.go) integrated with controller-runtime and helper suites for workload admission, gang scheduling, inference router, GPU hardware health, and checkpoints.
+- internal/metrics/metrics_test.go: unit tests verifying zero collisions, metric types, monotonicity, and nil safety.
+- Controllers instrumented: queue depth/allocation/admission latency, workload gang start latency and checkpoint metrics, node health GPU status and recovery duration, FSM phase transitions.
+- Router data plane instrumented: TTFT histogram, token generation rate, in-flight active requests, prefix cache hits, KV-cache scraping, and /metrics endpoint with promhttp handler.
+- deploy/monitoring/prometheus-rule.yaml: Multi-window multi-burn-rate PrometheusRule alerts for SLO-01 through SLO-04 + critical invariant alerts (partial gang starts).
+- deploy/monitoring/service-monitor.yaml: ServiceMonitor CRs for controller-manager, inference router, and node agent.
+- deploy/monitoring/grafana-dashboards.yaml: ConfigMap containing 3 production-grade dashboards (GPU Fleet Overview, Workload & Scheduling, Inference Router).
+- Fixed .github/workflows/ci.yaml: resolved job-level hashFiles() syntax error causing 'No jobs were run' workflow failures.
+
+**Verified:**
+- go test -v ./internal/metrics/... - PASS
+- go test -v ./internal/router/... - 7 tests PASS
+- go test -v ./internal/controller/... ./internal/agent/... ./internal/fsm/... - all PASS
+- go vet ./internal/... ./cmd/... ./pkg/... ./api/... ./bench/... ./tools/... - clean (exit code 0)
+- Zero mocks or stubs in product code
+
+**Next:** Phase 12 - Packaging, HA, Chaos: Helm, ArgoCD, Terraform, Leader Failover, Postmortem (ง9).
+
+---
+

@@ -21,6 +21,7 @@ import (
 	meridianv1alpha1 "github.com/tijani-web/meridian/api/v1alpha1"
 	"github.com/tijani-web/meridian/internal/checkpoint"
 	"github.com/tijani-web/meridian/internal/fsm"
+	"github.com/tijani-web/meridian/internal/metrics"
 )
 
 var log = logf.Log.WithName("workload-controller")
@@ -244,6 +245,11 @@ func (r *WorkloadReconciler) reconcileScheduling(ctx context.Context, w *meridia
 
 	// If at least minAvailable pods are running, transition to Running
 	if runningCount >= minAvailable {
+		if w.Status.AdmittedAt != nil {
+			startLatency := time.Since(w.Status.AdmittedAt.Time).Seconds()
+			metrics.Default().RecordGangStartLatency(w.Spec.QueueName, strconv.Itoa(gangSize), startLatency)
+		}
+
 		orig := w.DeepCopy()
 		now := time.Now()
 		if err := fsm.ApplyTransition(&w.Status, fsm.EventAllRunning, "AllRunning", fmt.Sprintf("%d/%d gang pods running", runningCount, gangSize), now); err != nil {
@@ -316,6 +322,7 @@ func (r *WorkloadReconciler) reconcileCheckpointing(ctx context.Context, w *meri
 	// If checkpoint has not been requested on the pods yet, dispatch the request
 	if w.Annotations == nil || w.Annotations[checkpoint.AnnotationCheckpointSeq] == "" {
 		isPreemption := w.Annotations != nil && w.Annotations[checkpoint.AnnotationPreemptRequested] == "true"
+		metrics.Default().RecordCheckpointRequest(w.Spec.QueueName)
 		if err := coord.RequestCheckpoint(ctx, w, pods, isPreemption); err != nil {
 			return ctrl.Result{}, fmt.Errorf("dispatch checkpoint request: %w", err)
 		}
@@ -333,6 +340,11 @@ func (r *WorkloadReconciler) reconcileCheckpointing(ctx context.Context, w *meri
 	switch status {
 	case checkpoint.AckStatusComplete:
 		orig := w.DeepCopy()
+		if reqAtStr := w.Annotations[checkpoint.AnnotationCheckpointRequestedAt]; reqAtStr != "" {
+			if reqAt, parseErr := time.Parse(time.RFC3339, reqAtStr); parseErr == nil {
+				metrics.Default().RecordCheckpointAckLatency(w.Spec.QueueName, time.Since(reqAt).Seconds())
+			}
+		}
 		if err := coord.CompleteCheckpoint(ctx, w, summary); err != nil {
 			return ctrl.Result{}, fmt.Errorf("complete checkpoint: %w", err)
 		}
@@ -363,6 +375,7 @@ func (r *WorkloadReconciler) reconcileCheckpointing(ctx context.Context, w *meri
 		return ctrl.Result{Requeue: true}, nil
 
 	case checkpoint.AckStatusTimeout:
+		metrics.Default().RecordCheckpointTimeout(w.Spec.QueueName)
 		orig := w.DeepCopy()
 		if err := coord.HandleTimeout(ctx, w, summary); err != nil {
 			return ctrl.Result{}, fmt.Errorf("handle checkpoint timeout: %w", err)

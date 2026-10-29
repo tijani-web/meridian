@@ -30,6 +30,7 @@ import (
 	agenthealth "github.com/tijani-web/meridian/internal/agent/health"
 	"github.com/tijani-web/meridian/internal/controller/workload"
 	"github.com/tijani-web/meridian/internal/fsm"
+	"github.com/tijani-web/meridian/internal/metrics"
 )
 
 var log = logf.Log.WithName("node-health-controller")
@@ -62,6 +63,7 @@ func (r *NodeHealthReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// 1. Inspect Node condition & taints
 	isUnhealthy, isFatal, faultReason := r.evaluateNodeHealth(&node)
+	metrics.Default().SetGPUHealthy(node.Name, "gpu-all", !isUnhealthy)
 	if !isUnhealthy {
 		return ctrl.Result{}, nil // Node is healthy
 	}
@@ -141,6 +143,7 @@ func (r *NodeHealthReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 		reqLog.Info("Workload transitioned to Recovering and evicted pods from failed node",
 			"workload", key, "generation", w.Status.Generation)
+		metrics.Default().RecordNodeRecoveryDuration(node.Name, time.Since(now).Seconds())
 	}
 
 	return ctrl.Result{}, nil

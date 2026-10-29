@@ -11,6 +11,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // Server coordinates the proxy handler, replica pool, metric scraper, and HTTP server.
@@ -125,6 +127,7 @@ func (s *Server) Start(ctx context.Context) error {
 	mux.HandleFunc("/healthz", s.HandleHealthz)
 	mux.HandleFunc("/readyz", s.HandleReadyz)
 	mux.HandleFunc("/routes", s.HandleRoutes)
+	mux.Handle("/metrics", promhttp.Handler())
 	mux.Handle("/v1/chat/completions", s.proxy)
 	mux.Handle("/v1/completions", s.proxy)
 
