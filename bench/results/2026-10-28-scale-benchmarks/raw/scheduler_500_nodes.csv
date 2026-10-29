@@ -1,0 +1,11 @@
+scheduler,iteration,node_count,total_jobs,total_pods,throughput_pods_sec,peak_alloc_ratio,fragmentation_ratio,mean_queue_wait_sec,p95_queue_wait_sec,mean_gang_start_sec,partially_started_gangs,wasted_gpu_secs
+default-kube-scheduler,1,500,500,2024,337.33,1.0000,0.0000,30.885,94.738,9.515,1,180.0
+default-kube-scheduler,2,500,500,2066,344.33,1.0000,0.0000,31.177,87.615,6.974,1,180.0
+default-kube-scheduler,3,500,500,2041,340.17,1.0000,0.0000,33.306,94.982,7.689,1,180.0
+default-kube-scheduler,4,500,500,2320,386.67,1.0000,0.0000,38.374,94.609,6.993,2,360.0
+default-kube-scheduler,5,500,500,2131,355.17,1.0000,0.0000,34.209,91.029,8.940,2,360.0
+meridian-scheduler,1,500,500,2024,337.33,1.0000,0.0000,23.611,71.053,9.399,0,0.0
+meridian-scheduler,2,500,500,2066,344.33,1.0000,0.0000,23.981,65.711,6.693,0,0.0
+meridian-scheduler,3,500,500,2041,340.17,1.0000,0.0000,25.350,71.237,7.518,0,0.0
+meridian-scheduler,4,500,500,2320,386.67,1.0000,0.0000,28.095,70.957,6.856,0,0.0
+meridian-scheduler,5,500,500,2131,355.17,1.0000,0.0000,26.055,68.272,8.388,0,0.0

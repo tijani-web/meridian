@@ -5,16 +5,17 @@ Per §1.2: never claim a number without a committed measurement behind it.
 
 ---
 
-## Hardware and Environment
+## Hardware and Environment (Committed Runs: 2026-10-28)
 
-> This section is filled in with the actual hardware used for each benchmark run.
-> Template:
-> - Host OS: [e.g., Ubuntu 22.04 / Windows 11 + WSL2]
-> - CPU: [model, core count]
-> - RAM: [GB]
-> - GPU: [model and count, or "none — simulated fleet via KWOK"]
-> - Kubernetes: kind v0.29.0, node image kindest/node:v1.33.1
-> - KWOK version: v0.8.0 (for scale tests)
+- Host OS: Windows 11 Enterprise (64-bit)
+- Go: go version go1.24.0 windows/amd64
+- Kubernetes: kind v0.29.0, node image kindest/node:v1.33.1
+- Fleet Simulation: KWOK v0.6.0 simulated nodes
+- Simulated Node Configurations:
+  - 500 nodes (4,000 GPUs) and 2,000 nodes (16,000 GPUs)
+  - 8 GPUs per node (75% NVIDIA H100 SXM5 80GB, 25% NVIDIA A100 80GB)
+  - Interconnect topology: 8 nodes per NVLink domain, 32 nodes per rack, multi-zone
+- Synthetic Workloads: `tools/trace-gen` Poisson arrivals, 1/2/4/8 GPUs per replica, gang size 1-16 pods (total 1-64 GPUs), 3 fair-share queues, 3 priority tiers
 
 ## Reproducibility
 

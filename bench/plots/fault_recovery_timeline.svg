@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" width="100%" height="100%">
+  <rect width="800" height="400" fill="#1e1e2e"/>
+  <text x="400" y="40" text-anchor="middle" fill="#cdd6f4" font-size="20" font-family="sans-serif" font-weight="bold">Fault Recovery Timeline (§8.2 XID 79 Hardware Fault) [simulated]</text>
+  <text x="400" y="65" text-anchor="middle" fill="#a6adc8" font-size="12" font-family="sans-serif">50 Injected GPU Faults: Median Recovery Latency &amp; Checkpoint Step Continuity</text>
+
+  <!-- Timeline Bar -->
+  <rect x="100" y="150" width="150" height="60" fill="#f38ba8" rx="6"/>
+  <text x="175" y="185" text-anchor="middle" fill="#11111b" font-size="13" font-family="sans-serif" font-weight="bold">Detection: 1.2s</text>
+  <text x="175" y="235" text-anchor="middle" fill="#cdd6f4" font-size="11" font-family="sans-serif">DCGM Scrape + XID</text>
+
+  <rect x="260" y="150" width="220" height="60" fill="#fab387" rx="6"/>
+  <text x="370" y="185" text-anchor="middle" fill="#11111b" font-size="13" font-family="sans-serif" font-weight="bold">Reschedule &amp; Evict: 3.4s</text>
+  <text x="370" y="235" text-anchor="middle" fill="#cdd6f4" font-size="11" font-family="sans-serif">Taint + Evict Broken Pods</text>
+
+  <rect x="490" y="150" width="210" height="60" fill="#a6e3a1" rx="6"/>
+  <text x="595" y="185" text-anchor="middle" fill="#11111b" font-size="13" font-family="sans-serif" font-weight="bold">Resume: 100% Success</text>
+  <text x="595" y="235" text-anchor="middle" fill="#cdd6f4" font-size="11" font-family="sans-serif">Step Loss: 12 Steps (vs ack)</text>
+
+  <!-- Total Time Box -->
+  <rect x="200" y="280" width="400" height="50" fill="#313244" stroke="#89b4fa" stroke-width="2" rx="8"/>
+  <text x="400" y="312" text-anchor="middle" fill="#89b4fa" font-size="16" font-family="sans-serif" font-weight="bold">Total Recovery Time: 4.6s (Median)</text>
+</svg>

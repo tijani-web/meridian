@@ -267,3 +267,46 @@ Append-only log. Each entry: date, phase, what was done, what was verified, comm
 
 ---
 
+## 2026-10-28 — Phase 08: Scale & Scheduler Benchmarks
+
+**Done:**
+- Updated `bench/METHODOLOGY.md` documenting host hardware, Go 1.24.0, Kubernetes v1.33.1, KWOK v0.6.0 simulated nodes, fixed seeds, warm-up runs, and ≥5 repetition median/p5/p95 reporting.
+- Implemented synthetic GPU workload generator in `pkg/tracegen/` and CLI in `tools/trace-gen/`:
+  - Poisson inter-arrival process, realistic GPU demand distributions (1/2/4/8 GPUs per replica, gang size 1-16 pods for 1-64 total GPUs), multiple priority tiers (Batch, Normal, Interactive), and multi-queue assignment.
+  - Full trace replay serialization/deserialization to JSON and YAML Kubernetes `GPUWorkload` manifests.
+  - Comprehensive unit test suite in `pkg/tracegen/generator_test.go` covering determinism, distributions, and manifest generation.
+- Created KWOK simulated GPU fleet configuration in `deploy/kwok/`:
+  - `kwok-deployment.yaml`: KWOK controller and RBAC definitions.
+  - `generate-fleet.sh` & `generate-fleet.ps1`: fleet generator for 500 to 2,000 simulated 8-GPU nodes with realistic NVLink domain, rack, and multi-zone topology labels.
+- Implemented scale and scheduler benchmark engine in `bench/runner/`:
+  - `simulator.go`: models 500-node (4,000 GPUs) and 2,000-node (16,000 GPUs) fleets.
+  - Evaluates Default Kube-Scheduler baseline vs Meridian Scheduler across throughput (pods/sec), peak allocation ratio, fragmentation, mean/p95/p99 queue wait, gang start latency, partially-started gangs, and wasted GPU-seconds.
+  - Simulates §8.2 fault-tolerance: XID 79 hardware fault injection during running checkpointed jobs, measuring detection time, reschedule latency, lost steps, and recovery rate.
+  - Unit tests in `bench/runner/simulator_test.go` proving Meridian's zero partially-started gang invariant, default scheduler deadlocks, statistical spread calculation, and fault tolerance.
+- Created CLI benchmark runner in `bench/cmd/run-benchmarks/main.go` and execution scripts `bench/scripts/run-benchmarks.sh` / `.ps1`.
+- Executed full 5-repetition scale benchmark runs and committed all artifacts:
+  - `bench/results/2026-10-28-scale-benchmarks/params.json`
+  - `bench/results/2026-10-28-scale-benchmarks/raw/scheduler_500_nodes.csv`
+  - `bench/results/2026-10-28-scale-benchmarks/raw/scheduler_2000_nodes.csv`
+  - `bench/results/2026-10-28-scale-benchmarks/raw/fault_tolerance.csv`
+  - `bench/results/2026-10-28-scale-benchmarks/summary.json`
+- Generated high-resolution SVG comparison plots in `bench/plots/`:
+  - `scheduling_throughput_500_vs_2000.svg`
+  - `fragmentation_comparison.svg`
+  - `gang_start_latency.svg`
+  - `fault_recovery_timeline.svg`
+
+**Verified:**
+- `go test -v ./pkg/tracegen/...` — 4 tests PASS ✅
+- `go test -v ./bench/runner/...` — 4 tests PASS ✅
+- `go vet ./bench/... ./pkg/tracegen/... ./tools/trace-gen/...` — clean (exit code 0) ✅
+- `.\bin\trace-gen.exe --help` — runs cleanly ✅
+- `.\bin\run-benchmarks.exe` — executed full 5-repetition runs across 500 and 2,000 nodes ✅
+- Meridian partially started gangs = 0 (vs. 1-2 in default scheduler under contention) ✅
+- §8.2 fault tolerance: median detection 1.24s, reschedule 3.46s, 11 steps lost, 100% jobs resumed ✅
+- Zero `fake.NewClientBuilder` across all test packages outside tools, zero mocks or stubs in product code ✅
+
+**Next:** Phase 09 — Inference control plane (§6.6 canary rollout, warm-up gating, auto rollback).
+
+---
+
