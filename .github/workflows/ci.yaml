@@ -90,7 +90,7 @@ jobs:
       - name: Run envtest integration tests
         run: |
           if [ -d "test/envtest" ] && [ -n "$(find test/envtest -name '*.go' 2>/dev/null)" ]; then
-            ASSETS=$(setup-envtest use 1.33.x --bin-dir ${{ runner.temp }}/k8s -p path)
+            ASSETS=$(setup-envtest use 1.37.x --bin-dir ${{ runner.temp }}/k8s -p path)
             KUBEBUILDER_ASSETS="$ASSETS" go test -race -count=1 -timeout 10m ./test/envtest/...
           else
             echo "test/envtest tests will run starting in Phase 01"

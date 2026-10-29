@@ -32,7 +32,7 @@ KUBECONFIG_OUT := $(shell pwd)/kubeconfig-meridian
 
 # Envtest
 ENVTEST        := $(shell pwd)/bin/setup-envtest
-ENVTEST_K8S_VER := 1.33.x
+ENVTEST_K8S_VER := 1.37.x
 
 # ============================================================
 # Default
