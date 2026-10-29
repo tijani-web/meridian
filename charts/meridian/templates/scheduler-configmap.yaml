@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "meridian.fullname" . }}-scheduler-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "meridian.labels" . | nindent 4 }}
+    app.kubernetes.io/component: scheduler
+data:
+  scheduler-config.yaml: |
+    apiVersion: kubescheduler.config.k8s.io/v1
+    kind: KubeSchedulerConfiguration
+    clientConnection:
+      kubeconfig: ""
+    leaderElection:
+      leaderElect: true
+      resourceName: {{ include "meridian.fullname" . }}-scheduler
+      resourceNamespace: {{ .Release.Namespace }}
+    profiles:
+      - schedulerName: meridian-scheduler
+        plugins:
+          queueSort:
+            enabled:
+              - name: MeridianGPU
+            disabled:
+              - name: "*"
+          preFilter:
+            enabled:
+              - name: MeridianGPU
+          filter:
+            enabled:
+              - name: MeridianGPU
+          score:
+            enabled:
+              - name: MeridianGPU
+          reserve:
+            enabled:
+              - name: MeridianGPU
+          permit:
+            enabled:
+              - name: MeridianGPU
+        pluginConfig:
+          - name: MeridianGPU
+            args:
+              weightFit: {{ .Values.scheduler.scoring.fragmentationWeight }}
+              weightTopo: {{ .Values.scheduler.scoring.topologyAffinityWeight }}
+              weightHealth: {{ .Values.scheduler.scoring.healthPenaltyWeight }}
+              permitTimeoutSeconds: 120

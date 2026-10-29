@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "meridian.fullname" . }}-router
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "meridian.labels" . | nindent 4 }}
+    app.kubernetes.io/component: router
+spec:
+  replicas: {{ .Values.router.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "meridian.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: router
+  template:
+    metadata:
+      labels:
+        {{- include "meridian.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: router
+    spec:
+      serviceAccountName: {{ include "meridian.serviceAccountName" . }}
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: router
+          image: "{{ .Values.image.registry }}/meridian-router:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /meridian-router
+          args:
+            - --port={{ .Values.router.port }}
+            - --strategy=LeastQueue
+            - --max-queue=200
+          ports:
+            - name: http
+              containerPort: {{ .Values.router.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.router.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL

@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "meridian.fullname" . }}-manager
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "meridian.labels" . | nindent 4 }}
+    app.kubernetes.io/component: manager
+spec:
+  replicas: {{ .Values.manager.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "meridian.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: manager
+  template:
+    metadata:
+      labels:
+        {{- include "meridian.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: manager
+    spec:
+      serviceAccountName: {{ include "meridian.serviceAccountName" . }}
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: manager
+          image: "{{ .Values.image.registry }}/meridian-manager:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /meridian-manager
+          args:
+            - --leader-elect={{ .Values.manager.leaderElection.enabled }}
+            - --leader-election-lease-duration={{ .Values.manager.leaderElection.leaseDuration }}
+            - --leader-election-renew-deadline={{ .Values.manager.leaderElection.renewDeadline }}
+            - --leader-election-retry-period={{ .Values.manager.leaderElection.retryPeriod }}
+            - --metrics-bind-address=:{{ .Values.manager.metricsPort }}
+            - --health-probe-bind-address=:{{ .Values.manager.healthProbePort }}
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.manager.metricsPort }}
+              protocol: TCP
+            - name: health
+              containerPort: {{ .Values.manager.healthProbePort }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.manager.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL

@@ -385,3 +385,43 @@ Append-only log. Each entry: date, phase, what was done, what was verified, comm
 
 ---
 
+
+---
+
+## 2026-10-29 - Phase 12: Packaging, HA, and Chaos Engineering
+
+**Done:**
+- charts/meridian/: Complete production Helm chart with:
+  - Chart.yaml, values.yaml, templates/_helpers.tpl, NOTES.txt
+  - serviceaccount.yaml, rbac.yaml (least-privilege ClusterRoles for manager/scheduler/agent/router)
+  - manager-deployment.yaml (2 replicas, leader election lease), manager-pdb.yaml
+  - scheduler-configmap.yaml (KubeSchedulerConfiguration), scheduler-deployment.yaml
+  - agent-daemonset.yaml (node health + flap damping), router-deployment.yaml, router-service.yaml, router-pdb.yaml
+  - webhook-cert.yaml (cert-manager Certificate + Issuer), service-monitors.yaml, prometheus-rules.yaml
+  - CRDs copied to charts/meridian/crds/
+- deploy/argocd/: appproject.yaml + application.yaml with ignoreDifferences for controller-managed fields
+- terraform/gpu-demo/: variables.tf, main.tf (AWS Deep Learning AMI + k3s + NVIDIA Container Toolkit), outputs.tf, README.md
+- docs/runbooks/: 7 operational runbooks (workload-stuck-pending, gang-never-starts, queue-starvation, node-flapping, router-shedding-too-much, controller-failover, rollback-a-canary)
+- test/chaos/: chaos engineering suite (doc.go, suite_test.go, leader_failover_test.go, gang_atomicity_test.go)
+  - Leader election failover test: kills active manager pod, verifies standby acquires lease within 30s, zero duplicate reconciliations
+  - Gang atomicity under churn: concurrent noisy workloads + gang submit, verifies zero partial-start invariant
+- docs/postmortems/2026-10-28-gang-permit-partial-start-near-miss.md: blameless postmortem with timeline, root cause, TOCTOU race analysis, fix, and action items
+- docs/adr/0005-permit-atomicity-snapshot-at-fire.md: design decision for gang abort atomicity
+
+**Verified:**
+- helm lint charts/meridian/ - PASS (clean, zero warnings)
+- go vet ./test/chaos/... - clean
+- All 7 runbooks cover real failure modes from debugging-log.md and Phase design
+- Zero mocks/stubs/fakes in product code
+
+**Phase 12 DoD:**
+- [x] Helm chart lints clean
+- [x] ArgoCD Application with ignoreDifferences for dynamic runtime fields
+- [x] Terraform GPU demo with documented cost warnings and runbook
+- [x] Leader election failover chaos test (30s lease window)
+- [x] Gang atomicity chaos test (zero partial starts under churn)
+- [x] 7 operational runbooks
+- [x] Real incident postmortem (blameless, action items resolved)
+- [x] ADR-0005 permit atomicity design decision
+
+**Next:** Phase 13 - Final integration + benchmark re-run + README completion.
