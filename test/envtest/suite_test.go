@@ -31,6 +31,7 @@ import (
 
 	meridianv1alpha1 "github.com/tijani-web/meridian/api/v1alpha1"
 	controllerhealth "github.com/tijani-web/meridian/internal/controller/health"
+	controllerinference "github.com/tijani-web/meridian/internal/controller/inference"
 	"github.com/tijani-web/meridian/internal/controller/queue"
 	"github.com/tijani-web/meridian/internal/controller/workload"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -129,6 +130,13 @@ var _ = BeforeSuite(func() {
 		Client:   mgr.GetClient(),
 		Scheme:   mgr.GetScheme(),
 		Recorder: mgr.GetEventRecorderFor("node-health-controller"),
+	}).SetupWithManager(mgr)).To(Succeed())
+
+	// Register Inference reconciler
+	Expect((&controllerinference.Reconciler{
+		Client:          mgr.GetClient(),
+		Scheme:          mgr.GetScheme(),
+		MetricsProvider: &controllerinference.StaticMetricsProvider{},
 	}).SetupWithManager(mgr)).To(Succeed())
 
 	// Run the manager in the background for the duration of the suite.

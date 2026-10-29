@@ -310,3 +310,24 @@ Append-only log. Each entry: date, phase, what was done, what was verified, comm
 
 ---
 
+## 2026-10-29 — Phase 09: Inference Control Plane
+
+**Done:**
+- Implemented `internal/controller/inference/`:
+  - `constants.go`: labels (`meridian.dev/model`, `meridian.dev/revision`, `meridian.dev/role`), finalizers, annotations, and routing ConfigMap suffix (`-routing-table`).
+  - `types.go`: `PublishedRoutingTable`, `PublishedRevision`, and `PublishedTarget` JSON schema for the data-plane router.
+  - `analysis.go`: Rollout metrics evaluator querying Prometheus/metrics provider for error rate and TTFT p99, evaluating step SLA gates for automated promote vs. automated rollback.
+  - `inference_controller.go`: complete controller-runtime reconciler managing child Deployments/Services, GPU requests (`nvidia.com/gpu`), `meridian-scheduler` scheduling, warm-up gating, stepwise canary promotion, auto-rollback on metric breach, and atomic routing ConfigMap publication.
+  - `inference_controller_test.go`: unit test suite verifying revision hashing, step promotion, error rate rollback, TTFT p99 rollback, and published JSON table serialization.
+- Registered inference reconciler in `test/envtest/suite_test.go` and created integration suite in `test/envtest/inference_controller_test.go`.
+- Created E2E test in `test/e2e/canary_rollback_test.go` verifying warm-up gating (0% traffic until warm, then 20%), automated canary promote under healthy metrics, and automated canary rollback (traffic immediately snapped back to 100% stable / 0% canary) upon error rate or TTFT p99 latency breaches.
+
+**Verified:**
+- `go test -v ./internal/controller/inference/...` — 6 tests PASS ✅
+- `go test -v ./test/e2e/...` — E2E warm-up gating and canary promote/rollback tests PASS ✅
+- `go vet ./internal/controller/inference/... ./test/e2e/...` — clean (exit code 0) ✅
+- Zero `fake.NewClientBuilder` across all test packages outside tools, zero mocks or stubs in product code ✅
+
+**Next:** Phase 10 — Inference router + emulator + loadgen + benchmarks (§6.7, §8.3).
+
+---
