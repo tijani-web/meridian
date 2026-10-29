@@ -52,12 +52,12 @@ help: ## Print this help message
 .PHONY: generate
 generate: controller-gen ## Run all code generators (deepcopy, CRD manifests, RBAC)
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
-	$(CONTROLLER_GEN) crd rbac:roleName=meridian-manager-role webhook paths="./..." output:crd:artifacts:config=config/crd output:rbac:artifacts:config=config/rbac output:webhook:artifacts:config=config/webhook
+	$(CONTROLLER_GEN) crd rbac:roleName=meridian-manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases output:rbac:artifacts:config=config/rbac output:webhook:artifacts:config=config/webhook
 
 .PHONY: manifests
 manifests: controller-gen ## Regenerate CRD and RBAC manifests
 	$(CONTROLLER_GEN) crd rbac:roleName=meridian-manager-role webhook paths="./..." \
-	  output:crd:artifacts:config=config/crd \
+	  output:crd:artifacts:config=config/crd/bases \
 	  output:rbac:artifacts:config=config/rbac \
 	  output:webhook:artifacts:config=config/webhook
 

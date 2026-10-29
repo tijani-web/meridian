@@ -7,8 +7,9 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - configmaps
   - pods
-  - events
+  - services
   verbs:
   - create
   - delete
@@ -20,10 +21,39 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - ""
+  resources:
   - nodes
   verbs:
   - get
   - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - nodes/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - meridian.dev
@@ -52,8 +82,6 @@ rules:
 - apiGroups:
   - meridian.dev
   resources:
-  - gpuqueues/finalizers
   - gpuworkloads/finalizers
-  - inferencedeployments/finalizers
   verbs:
   - update

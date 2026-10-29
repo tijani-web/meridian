@@ -48,11 +48,6 @@ func (d *inferenceDeploymentDefaulter) Default(ctx context.Context, r *Inference
 		r.Spec.Model.Revision = "main"
 	}
 
-	// Runtime.Port defaults to 8000 (OpenAI-compatible serving port).
-	if r.Spec.Runtime.Port == 0 {
-		r.Spec.Runtime.Port = 8000
-	}
-
 	// Runtime.MetricsPath defaults to "/metrics".
 	if r.Spec.Runtime.MetricsPath == "" {
 		r.Spec.Runtime.MetricsPath = "/metrics"
@@ -71,11 +66,6 @@ func (d *inferenceDeploymentDefaulter) Default(ctx context.Context, r *Inference
 	// Warmup.MinWarmRequests defaults to 1 to ensure at least one synthetic warmup pass.
 	if r.Spec.Warmup.MinWarmRequests == 0 {
 		r.Spec.Warmup.MinWarmRequests = 1
-	}
-
-	// LoadShedding.MaxQueueDepth defaults to 100 if load shedding is configured.
-	if r.Spec.Routing.LoadShedding != nil && r.Spec.Routing.LoadShedding.MaxQueueDepth == 0 {
-		r.Spec.Routing.LoadShedding.MaxQueueDepth = 100
 	}
 
 	return nil
