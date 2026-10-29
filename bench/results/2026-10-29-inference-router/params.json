@@ -1,0 +1,17 @@
+{
+  "arrivalDistribution": "Open-loop Poisson process at 25 req/sec",
+  "baseTPOTMs": 8,
+  "baseTTFTMs": 35,
+  "date": "2026-10-29",
+  "model": "llama-3-8b",
+  "prefixAcceleration": 0.8,
+  "replicas": 4,
+  "sheddingThreshold": 120,
+  "strategies": [
+    "RoundRobin",
+    "LeastQueue",
+    "KVAware",
+    "PrefixAffinity"
+  ],
+  "workloadMix": "70% shared system prompt, 30% unique conversational prompt"
+}
