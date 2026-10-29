@@ -5,16 +5,16 @@ Machine-readable resume state. Overwritten on every update.
 ---
 
 ## Current Phase
-`phase/08-scale-benchmarks`
+`phase/09-inference-control-plane`
 
 ## Current Branch
-`phase/08-scale-benchmarks`
+`phase/09-inference-control-plane`
 
 ## Last Green Commit
-Pending commit for Phase 08
+Pending commit for Phase 09
 
 ## Status
-`PHASE_08_COMPLETE — READY_FOR_PR`
+`PHASE_09_COMPLETE — READY_FOR_PR`
 
 ## Open Issues
 (none)
@@ -23,9 +23,9 @@ Pending commit for Phase 08
 (none — autonomy mode active)
 
 ## Next 3 Actions
-1. Commit Phase 08 files with Conventional Commit `feat(bench): Phase 08 — Scale and scheduler benchmarks, KWOK fleet, trace-gen, committed runs, and plots`.
-2. Push branch `phase/08-scale-benchmarks`.
-3. Open PR to `main`, merge, tag `phase-08-done`, proceed to Phase 09 (`phase/09-inference-control-plane`).
+1. Commit Phase 09 files with Conventional Commit `feat(inference): Phase 09 — Inference control plane, canary rollout, warm-up gating, and automated rollback`.
+2. Push branch `phase/09-inference-control-plane` and merge PR into `main`.
+3. Tag `phase-09-done`, push tag, and start Phase 10 (`phase/10-inference-router`).
 
 ## Phase 08 DoD Checklist
 - [x] `bench/METHODOLOGY.md` updated with host environment, Go version, KWOK simulated node topologies, and statistical parameters
@@ -50,6 +50,18 @@ Pending commit for Phase 08
 - [x] Zero `fake.NewClientBuilder` across all test packages outside tools, zero mocks or stubs in product code
 - [x] All unit and integration tests green
 
+## Phase 09 DoD Checklist
+- [x] Reconciles `InferenceDeployment` into per-revision Deployments + Services with `meridian-scheduler`
+- [x] Warm-up gating implemented: replicas gated until warm, 0% traffic weight until warm-up succeeds
+- [x] Stepwise canary rollout with automated hold/promote based on error rate & TTFT p99 metric analysis
+- [x] Automated rollback to 100% stable / 0% canary on SLA breach tested and verified
+- [x] Published routing table ConfigMap (`<name>-routing-table`) containing JSON endpoints, weights, and strategy
+- [x] `internal/controller/inference/inference_controller_test.go` — all unit tests PASS
+- [x] `test/e2e/canary_rollback_test.go` — E2E canary promote and rollback tests PASS
+- [x] Integration registered in `test/envtest/suite_test.go` and `test/envtest/inference_controller_test.go`
+- [x] Zero `fake.NewClientBuilder` across all test packages outside tools, zero mocks or stubs in product code
+- [x] `go vet` clean (exit code 0)
+
 ## Completed Phases
 - Phase 00 — Bootstrap (completed 2026-10-27)
 - Phase 01 — APIs, CRDs, Webhooks, Envtest Harness (completed 2026-10-27)
@@ -60,6 +72,13 @@ Pending commit for Phase 08
 - Phase 06 — Node Health, Telemetry, and Fault Controller (completed 2026-10-28)
 - Phase 07 — Explainability & Tracing (completed 2026-10-28)
 - Phase 08 — Scale & Scheduler Benchmarks (completed 2026-10-28)
+- Phase 09 — Inference Control Plane (completed 2026-10-29)
+
+## Remaining Phases
+- Phase 10 — Inference Router + Emulator + Loadgen + Benchmarks (§6.7, §8.3)
+- Phase 11 — Observability: Metrics, Grafana Dashboards, SLOs, PrometheusRules (§6.9)
+- Phase 12 — Packaging, HA, Chaos: Helm, ArgoCD, Terraform, Leader Failover, Postmortem (§9)
+- Phase 13 — Documentation, Resume Bullets, and v0.1.0 Release (§11, §14)
 
 ## Tags Pushed
 - phase-00-done
@@ -70,4 +89,5 @@ Pending commit for Phase 08
 - phase-05-done
 - phase-06-done
 - phase-07-done
-- phase-08-done (pending — push after PR merge)
+- phase-08-done
+- phase-09-done (pending — push after PR merge)
