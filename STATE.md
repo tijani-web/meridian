@@ -5,16 +5,16 @@ Machine-readable resume state. Overwritten on every update.
 ---
 
 ## Current Phase
-`phase/09-inference-control-plane`
+`phase/10-inference-router`
 
 ## Current Branch
-`phase/09-inference-control-plane`
+`phase/10-inference-router`
 
 ## Last Green Commit
-Pending commit for Phase 09
+85866b1 (Merge pull request #8 from tijani-web/phase/09-inference-control-plane)
 
 ## Status
-`PHASE_09_COMPLETE — READY_FOR_PR`
+`PHASE_10_IN_PROGRESS`
 
 ## Open Issues
 (none)
@@ -23,9 +23,9 @@ Pending commit for Phase 09
 (none — autonomy mode active)
 
 ## Next 3 Actions
-1. Commit Phase 09 files with Conventional Commit `feat(inference): Phase 09 — Inference control plane, canary rollout, warm-up gating, and automated rollback`.
-2. Push branch `phase/09-inference-control-plane` and merge PR into `main`.
-3. Tag `phase-09-done`, push tag, and start Phase 10 (`phase/10-inference-router`).
+1. Implement design doc `docs/design/router-strategies.md` and `tools/vllm-emu` OpenAI-compatible emulator with v0.9.2 vLLM metrics.
+2. Implement router core in `internal/router/` (4 strategies, streaming proxy, load shedding, metrics scraper) and `cmd/router/main.go`.
+3. Implement `tools/loadgen/`, execute §8.3 benchmark suite, commit raw results/plots, and pass DoD.
 
 ## Phase 08 DoD Checklist
 - [x] `bench/METHODOLOGY.md` updated with host environment, Go version, KWOK simulated node topologies, and statistical parameters
@@ -62,6 +62,17 @@ Pending commit for Phase 09
 - [x] Zero `fake.NewClientBuilder` across all test packages outside tools, zero mocks or stubs in product code
 - [x] `go vet` clean (exit code 0)
 
+## Phase 10 DoD Checklist
+- [ ] `docs/design/router-strategies.md`: architectural design document for inference data plane, 4 strategies, metrics scraping, load shedding
+- [ ] `tools/vllm-emu`: standalone OpenAI-compatible streaming emulator exposing pinned v0.9.2 vLLM Prometheus metrics
+- [ ] `internal/router/`: core reverse proxy, SSE streaming passthrough, 4 routing strategies (`RoundRobin`, `LeastQueue`, `KVAware`, `PrefixAffinity`)
+- [ ] Load shedding with 429 and `Retry-After` header with priority classification
+- [ ] `cmd/router/`: standalone router binary
+- [ ] Streaming correctness tests: SSE token delivery, client cancellation propagation, replica failure handling
+- [ ] `tools/loadgen/`: synthetic Poisson load generator supporting shared prefix distributions
+- [ ] §8.3 Four-strategy benchmarks executed with committed raw CSV/JSON results and SVG comparison plots under `bench/results/` and `bench/plots/`
+- [ ] Zero mocks or stubs in product code, clean `go vet` and tests green
+
 ## Completed Phases
 - Phase 00 — Bootstrap (completed 2026-10-27)
 - Phase 01 — APIs, CRDs, Webhooks, Envtest Harness (completed 2026-10-27)
@@ -90,4 +101,4 @@ Pending commit for Phase 09
 - phase-06-done
 - phase-07-done
 - phase-08-done
-- phase-09-done (pending — push after PR merge)
+- phase-09-done
