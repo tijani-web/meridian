@@ -57,10 +57,13 @@ func TestChaos(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	ctx, cancel = context.WithCancel(context.Background())
-
 	kubeconfig := os.Getenv("KUBECONFIG")
-	Expect(kubeconfig).NotTo(BeEmpty(), "KUBECONFIG must be set to run chaos tests")
+	if kubeconfig == "" {
+		Skip("KUBECONFIG must be set to run chaos tests (requires live kind cluster)")
+		return
+	}
+
+	ctx, cancel = context.WithCancel(context.Background())
 
 	restCfg, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	Expect(err).NotTo(HaveOccurred())
@@ -85,10 +88,14 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	cancel()
+	if cancel != nil {
+		cancel()
+	}
 	// Clean up test namespace after the suite.
-	ns := &corev1.Namespace{}
-	if err := k8sClient.Get(ctx, types.NamespacedName{Name: testNS}, ns); err == nil {
-		_ = k8sClient.Delete(ctx, ns)
+	if k8sClient != nil && ctx != nil {
+		ns := &corev1.Namespace{}
+		if err := k8sClient.Get(ctx, types.NamespacedName{Name: testNS}, ns); err == nil {
+			_ = k8sClient.Delete(ctx, ns)
+		}
 	}
 })

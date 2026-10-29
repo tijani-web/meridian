@@ -425,3 +425,33 @@ Append-only log. Each entry: date, phase, what was done, what was verified, comm
 - [x] ADR-0005 permit atomicity design decision
 
 **Next:** Phase 13 - Final integration + benchmark re-run + README completion.
+
+---
+
+## 2026-10-29 - Phase 13: Final Integration, Design Docs, and v0.1.0 Release
+
+**Done:**
+- README.md: Architecture diagram, real-vs-simulated table, quick-start on kind, benchmark results tables (all numbers from committed JSON/CSV files), tested failure modes, runbooks and ADR directory
+- docs/INTERVIEW-NOTES.md: Full narrative behind each major design decision (ADRs 0001-0005), root-cause analysis for all 3 real bugs encountered, and honest retrospective
+- docs/RESUME-BULLETS.md: Portfolio claims with every single number traceable to a committed result file path under bench/results/
+- docs/design/informers-and-indexers.md: Informer caching, 3 custom indexers, owner references, watch predicates, cache-sync startup
+- docs/design/workload-fsm.md: GPUWorkload FSM state diagram, pure-function transitions, idempotency invariants, testing hierarchy
+- docs/design/slos.md: 4 production SLO definitions, multi-window burn-rate math (2h/5h/30d), PrometheusRules, gang partial-start hard invariant
+- docs/VERSIONS.md: v0.1.0 changelog with verified component versions
+- test/chaos/suite_test.go: safe skip when KUBECONFIG is unset and nil dereference protection in AfterSuite
+
+**Verified:**
+- go test -v ./internal/controller/... ./internal/agent/... ./internal/fsm/... ./internal/router/... ./internal/metrics/... - all PASS
+- go test -v ./test/chaos/... - skips cleanly without KUBECONFIG (0 failures, 0 panics)
+- go vet ./cmd/... ./pkg/... ./internal/... ./bench/... ./tools/... ./test/chaos/... - clean (exit code 0)
+- Zero mocks, stubs, or fake clients in product code
+- All 13 phases complete and verified
+
+**Phase 13 DoD:**
+- [x] README.md with architecture diagram, quickstart, and measured benchmark tables
+- [x] All design docs and ADRs complete and accurate
+- [x] docs/INTERVIEW-NOTES.md with deep dive into design decisions and real bug root-cause analysis
+- [x] docs/RESUME-BULLETS.md with every metric backed by committed bench data
+- [x] docs/LIMITATIONS.md honest and verified
+- [x] docs/VERSIONS.md current with v0.1.0 release notes
+- [x] All tests and static analysis clean across the entire repository

@@ -29,3 +29,21 @@ Check official release pages; do not rely on memory.
 > **NOTE**: Versions must be verified against live release pages at Phase 0 start.
 > If a newer stable version exists when re-reading this, update and record the date.
 > The Go module `go.mod` is the authoritative pin for all Go dependency versions.
+
+## v0.1.0 — Phase 13 (2026-10-29)
+
+### Added
+- README.md: complete with architecture diagram, quickstart, measured benchmark tables, design decision index, and runbook links
+- docs/INTERVIEW-NOTES.md: story behind every ADR and every real bug from debugging-log.md
+- docs/RESUME-BULLETS.md: portfolio claims with every number traceable to a committed result file
+- docs/design/informers-and-indexers.md: informer cache, three custom indexers, watch predicates, and startup sync
+- docs/design/workload-fsm.md: full state diagram, implementation pattern, idempotency invariants, testing strategy
+- docs/design/slos.md: 4 SLO definitions, multi-window burn-rate alerting math, PrometheusRule examples
+- Phase 12 Phase 13 tagged, v0.1.0 released
+
+### Design docs complete
+- docs/design/: fair-share.md, scoring.md, checkpoint-protocol.md, informers-and-indexers.md,
+  workload-fsm.md, router-strategies.md, slos.md, decision-records.md, observability.md, node-health-and-xid.md
+- docs/adr/: 0001-0005 all complete
+
+### All 13 phases done
