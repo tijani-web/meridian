@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 420" width="100%!"(int=92) height="100%!"(int=237)>
+  <rect width="850" height="420" fill="#1e1e2e"/>
+  <text x="425" y="38" text-anchor="middle" fill="#cdd6f4" font-size="20" font-family="sans-serif" font-weight="bold">Inference Serving Throughput &amp; Load Shedding Rate [simulated]</text>
+  <text x="425" y="62" text-anchor="middle" fill="#a6adc8" font-size="12" font-family="sans-serif">Throughput (Tokens/sec) Higher is Better — Shed Rate (%) Lower is Better</text>
+
+  <!-- Axes -->
+  <line x1="100" y1="330" x2="780" y2="330" stroke="#45475a" stroke-width="2"/>
+  <line x1="100" y1="90" x2="100" y2="330" stroke="#45475a" stroke-width="2"/>
+
+  <!-- RoundRobin -->
+  <text x="180" y="355" text-anchor="middle" fill="#cdd6f4" font-size="13" font-family="sans-serif">RoundRobin</text>
+  <rect x="150" y="82" width="60" height="%!d(float64=198.17942164649105)" fill="#f38ba8" rx="4"/>
+  <text x="180" y="101" text-anchor="middle" fill="#f38ba8" font-size="12" font-family="sans-serif" font-weight="bold">%!f(int=228) tok/s</text>
+
+  <!-- LeastQueue -->
+  <text x="360" y="355" text-anchor="middle" fill="#cdd6f4" font-size="13" font-family="sans-serif">LeastQueue</text>
+  <rect x="330" y="91" width="60" height="%!d(float64=190.67288999145487)" fill="#fab387" rx="4"/>
+  <text x="360" y="103" text-anchor="middle" fill="#fab387" font-size="12" font-family="sans-serif" font-weight="bold">%!f(int=226) tok/s</text>
+
+  <!-- KVAware -->
+  <text x="540" y="355" text-anchor="middle" fill="#cdd6f4" font-size="13" font-family="sans-serif">KVAware</text>
+  <rect x="510" y="93" width="60" height="%!d(float64=189.0589209660007)" fill="#89b4fa" rx="4"/>
+  <text x="540" y="102" text-anchor="middle" fill="#89b4fa" font-size="12" font-family="sans-serif" font-weight="bold">%!f(int=227) tok/s</text>
+
+  <!-- PrefixAffinity -->
+  <text x="720" y="355" text-anchor="middle" fill="#cdd6f4" font-size="13" font-family="sans-serif" font-weight="bold">PrefixAffinity</text>
+  <rect x="690" y="92" width="60" height="%!d(float64=189.59399438508498)" fill="#a6e3a1" rx="4"/>
+  <text x="720" y="%!d(MISSING)" text-anchor="middle" fill="#a6e3a1" font-size="12" font-family="sans-serif" font-weight="bold">%!f(MISSING) tok/s</text>
+
+  <!-- Legend -->
+  <rect x="310" y="388" width="14" height="14" fill="#a6e3a1" rx="2"/>
+  <text x="330" y="400" fill="#cdd6f4" font-size="12" font-family="sans-serif">Serving Throughput (Tokens/s)</text>
+</svg>

@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 420" width="100%!"(int=250) height="100%!"(int=79)>
+  <rect width="850" height="420" fill="#1e1e2e"/>
+  <text x="425" y="38" text-anchor="middle" fill="#cdd6f4" font-size="20" font-family="sans-serif" font-weight="bold">Inference Time-to-First-Token (TTFT) by Strategy [simulated vLLM]</text>
+  <text x="425" y="62" text-anchor="middle" fill="#a6adc8" font-size="12" font-family="sans-serif">Lower is Better (ms) — 70% Shared Prefix, Open-Loop Poisson 25 req/s</text>
+
+  <!-- Axes -->
+  <line x1="100" y1="330" x2="780" y2="330" stroke="#45475a" stroke-width="2"/>
+  <line x1="100" y1="90" x2="100" y2="330" stroke="#45475a" stroke-width="2"/>
+
+  <!-- RoundRobin -->
+  <text x="180" y="355" text-anchor="middle" fill="#cdd6f4" font-size="13" font-family="sans-serif">RoundRobin</text>
+  <rect x="140" y="240" width="35" height="%!d(float64=17.583)" fill="#f38ba8" rx="3"/>
+  <text x="157" y="-86" text-anchor="middle" fill="#f38ba8" font-size="11" font-family="sans-serif">p50: %!f(int=416)</text>
+  <rect x="185" y="-96" width="35" height="%!d(float64=92.573)" fill="#eba0ac" rx="3"/>
+  <text x="202" y="236" text-anchor="middle" fill="#eba0ac" font-size="11" font-family="sans-serif">p99: %!f(int=93)</text>
+
+  <!-- LeastQueue -->
+  <text x="360" y="355" text-anchor="middle" fill="#cdd6f4" font-size="13" font-family="sans-serif">LeastQueue</text>
+  <rect x="320" y="226" width="35" height="%!d(float64=20.8)" fill="#fab387" rx="3"/>
+  <text x="337" y="-3" text-anchor="middle" fill="#fab387" font-size="11" font-family="sans-serif">p50: %!f(int=333)</text>
+  <rect x="365" y="-13" width="35" height="%!d(float64=74.148)" fill="#f9e2af" rx="3"/>
+  <text x="382" y="254" text-anchor="middle" fill="#f9e2af" font-size="11" font-family="sans-serif">p99: %!f(int=75)</text>
+
+  <!-- KVAware -->
+  <text x="540" y="355" text-anchor="middle" fill="#cdd6f4" font-size="13" font-family="sans-serif">KVAware</text>
+  <rect x="500" y="244" width="35" height="%!d(float64=16.73)" fill="#89b4fa" rx="3"/>
+  <text x="517" y="-55" text-anchor="middle" fill="#89b4fa" font-size="11" font-family="sans-serif">p50: %!f(int=385)</text>
+  <rect x="545" y="-65" width="35" height="%!d(float64=85.723)" fill="#b4befe" rx="3"/>
+  <text x="562" y="251" text-anchor="middle" fill="#b4befe" font-size="11" font-family="sans-serif">p99: %!f(int=78)</text>
+
+  <!-- PrefixAffinity -->
+  <text x="720" y="355" text-anchor="middle" fill="#cdd6f4" font-size="13" font-family="sans-serif" font-weight="bold">PrefixAffinity</text>
+  <rect x="680" y="241" width="35" height="%!d(float64=17.43)" fill="#a6e3a1" rx="3"/>
+  <text x="697" y="-270" text-anchor="middle" fill="#a6e3a1" font-size="11" font-family="sans-serif" font-weight="bold">p50: %!f(int=600)</text>
+  <rect x="725" y="-280" width="35" height="%!d(float64=133.525)" fill="#94e2d5" rx="3"/>
+  <text x="742" y="%!d(MISSING)" text-anchor="middle" fill="#94e2d5" font-size="11" font-family="sans-serif" font-weight="bold">p99: %!f(MISSING)</text>
+
+  <!-- Legend -->
+  <rect x="310" y="388" width="14" height="14" fill="#a6e3a1" rx="2"/>
+  <text x="330" y="400" fill="#cdd6f4" font-size="12" font-family="sans-serif">TTFT p50 (Median)</text>
+  <rect x="490" y="388" width="14" height="14" fill="#eba0ac" rx="2"/>
+  <text x="510" y="400" fill="#cdd6f4" font-size="12" font-family="sans-serif">TTFT p99 (Tail)</text>
+</svg>
