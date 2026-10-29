@@ -360,3 +360,28 @@ Append-only log. Each entry: date, phase, what was done, what was verified, comm
 **Next:** Phase 11 - Observability: Metrics, Grafana Dashboards, SLOs, PrometheusRules (§6.9).
 
 ---
+
+## 2026-10-29 - Phase 11: Observability (Metrics, Grafana Dashboards, SLOs, PrometheusRules)
+
+**Done:**
+- docs/design/observability.md: full metrics catalog, SLO definitions (SLO-01 to SLO-04), multi-window burn-rate alert formulas, and 3 Grafana dashboard architectures.
+- internal/metrics/: singleton Prometheus registry (registry.go) integrated with controller-runtime and helper suites for workload admission, gang scheduling, inference router, GPU hardware health, and checkpoints.
+- internal/metrics/metrics_test.go: unit tests verifying zero collisions, metric types, monotonicity, and nil safety.
+- Controllers instrumented: queue depth/allocation/admission latency, workload gang start latency and checkpoint metrics, node health GPU status and recovery duration, FSM phase transitions.
+- Router data plane instrumented: TTFT histogram, token generation rate, in-flight active requests, prefix cache hits, KV-cache scraping, and /metrics endpoint with promhttp handler.
+- deploy/monitoring/prometheus-rule.yaml: Multi-window multi-burn-rate PrometheusRule alerts for SLO-01 through SLO-04 + critical invariant alerts (partial gang starts).
+- deploy/monitoring/service-monitor.yaml: ServiceMonitor CRs for controller-manager, inference router, and node agent.
+- deploy/monitoring/grafana-dashboards.yaml: ConfigMap containing 3 production-grade dashboards (GPU Fleet Overview, Workload & Scheduling, Inference Router).
+- Fixed .github/workflows/ci.yaml: resolved job-level hashFiles() syntax error causing 'No jobs were run' workflow failures.
+
+**Verified:**
+- go test -v ./internal/metrics/... - PASS
+- go test -v ./internal/router/... - 7 tests PASS
+- go test -v ./internal/controller/... ./internal/agent/... ./internal/fsm/... - all PASS
+- go vet ./internal/... ./cmd/... ./pkg/... ./api/... ./bench/... ./tools/... - clean (exit code 0)
+- Zero mocks or stubs in product code
+
+**Next:** Phase 12 - Packaging, HA, Chaos: Helm, ArgoCD, Terraform, Leader Failover, Postmortem (§9).
+
+---
+

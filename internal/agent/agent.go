@@ -19,6 +19,7 @@ import (
 	"k8s.io/klog/v2"
 
 	"github.com/tijani-web/meridian/internal/agent/health"
+	"github.com/tijani-web/meridian/internal/metrics"
 )
 
 // Config parameters for the Node Health Agent daemon.
@@ -100,6 +101,21 @@ func (a *Agent) evaluate(ctx context.Context) error {
 	worstMsg := "All on-node GPU devices are operating normally"
 
 	for _, s := range allStatuses {
+		gpuID := fmt.Sprintf("gpu-%d", s.Index)
+		if s.UUID != "" {
+			gpuID = s.UUID
+		}
+		metrics.Default().SetGPUHealthy(a.config.NodeName, gpuID, s.Healthy)
+		if s.TemperatureCelsius > 0 {
+			metrics.Default().SetGPUTemperature(a.config.NodeName, gpuID, s.TemperatureCelsius)
+		}
+		if s.XID > 0 {
+			metrics.Default().RecordXIDEvent(a.config.NodeName, gpuID, fmt.Sprintf("%d", s.XID), string(s.Severity))
+		}
+		if s.ECCUncorrectableErrors > 0 {
+			metrics.Default().RecordECCDBE(a.config.NodeName, gpuID)
+		}
+
 		if !s.Healthy {
 			observedHealthy = false
 			if s.Severity == health.SeverityFatal {

@@ -19,6 +19,7 @@ import (
 	meridianv1alpha1 "github.com/tijani-web/meridian/api/v1alpha1"
 	"github.com/tijani-web/meridian/internal/checkpoint"
 	"github.com/tijani-web/meridian/internal/fsm"
+	"github.com/tijani-web/meridian/internal/metrics"
 )
 
 var log = logf.Log.WithName("queue-controller")
@@ -122,8 +123,10 @@ func (r *QueueReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 			Borrowed: borrowedUsed[gpuType],
 			Lent:     0, // Computed cluster-wide
 		}
+		metrics.Default().SetQueueGPUAllocated(q.Name, gpuType, float64(used))
 		_ = nominal
 	}
+	metrics.Default().SetQueueDepth(q.Name, fmt.Sprintf("%d", q.Spec.Priority), float64(pendingCount))
 
 	if err := r.Status().Patch(ctx, &q, client.MergeFrom(origQueue)); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to patch queue status: %w", err)
@@ -209,6 +212,14 @@ func (r *QueueReconciler) admitWorkload(ctx context.Context, w *meridianv1alpha1
 	if err := r.Status().Patch(ctx, w, client.MergeFrom(orig)); err != nil {
 		return fmt.Errorf("failed to update workload admission status: %w", err)
 	}
+
+	admissionLatency := time.Since(w.CreationTimestamp.Time).Seconds()
+	prio := w.Spec.PriorityClassName
+	if prio == "" {
+		prio = "default"
+	}
+	metrics.Default().RecordAdmissionLatency(w.Spec.QueueName, prio, admissionLatency)
+	metrics.Default().RecordAdmission(w.Spec.QueueName, prio, "admitted")
 
 	// 2. Remove scheduling gate from all member pods
 	var podList corev1.PodList

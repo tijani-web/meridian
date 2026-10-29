@@ -11,8 +11,11 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/tijani-web/meridian/internal/metrics"
 )
 
 // ProxyConfig defines operational thresholds for the inference reverse proxy.
@@ -40,6 +43,7 @@ type ProxyHandler struct {
 	client   *http.Client
 	getPool  func() []*ReplicaState
 	strategy Strategy
+	metrics  *metrics.Metrics
 
 	TotalRouted uint64
 	TotalShed   uint64
@@ -60,7 +64,13 @@ func NewProxyHandler(engine *StrategyEngine, cfg ProxyConfig, strategy Strategy,
 		client:   &http.Client{Transport: transport, Timeout: cfg.UpstreamTimeout},
 		getPool:  getPool,
 		strategy: strategy,
+		metrics:  metrics.Default(),
 	}
+}
+
+// SetMetrics allows setting a custom or test metrics collector.
+func (p *ProxyHandler) SetMetrics(m *metrics.Metrics) {
+	p.metrics = m
 }
 
 // SetStrategy updates the active routing strategy dynamically.
@@ -113,6 +123,7 @@ func (p *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1. Evaluate Load Shedding
 	if shed, retryAfter, reason := p.ShouldShed(pool, priority); shed {
 		atomic.AddUint64(&p.TotalShed, 1)
+		p.metrics.RecordRouterRequest(string(p.strategy), string(priority), "shed_429")
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
 		w.WriteHeader(http.StatusTooManyRequests)
@@ -155,6 +166,7 @@ func (p *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 3. Select Target Replica via Strategy
 	decision, err := p.engine.Route(p.strategy, pool, prefixText)
 	if err != nil {
+		p.metrics.RecordRouterRequest(string(p.strategy), string(priority), "no_replicas_503")
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusServiceUnavailable)
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
@@ -169,6 +181,9 @@ func (p *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	target := decision.SelectedReplica
 	atomic.AddUint64(&p.TotalRouted, 1)
+	if decision.IsCacheHit {
+		p.metrics.RecordPrefixCacheHit(string(p.strategy), target.ID)
+	}
 
 	// Increment inflight load on selected target
 	target.mu.Lock()
@@ -183,10 +198,15 @@ func (p *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		target.mu.Unlock()
 	}()
 
+	start := time.Now()
+	p.metrics.IncRouterActiveRequests(string(p.strategy))
+	defer p.metrics.DecRouterActiveRequests(string(p.strategy))
+
 	// 4. Construct Upstream Request
 	targetURL := fmt.Sprintf("%s%s", strings.TrimRight(target.Address, "/"), r.URL.RequestURI())
 	upstreamReq, err := http.NewRequestWithContext(r.Context(), r.Method, targetURL, bytes.NewReader(bodyBytes))
 	if err != nil {
+		p.metrics.RecordRouterRequest(string(p.strategy), string(priority), "error_500")
 		http.Error(w, fmt.Sprintf("failed to create upstream request: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -209,10 +229,13 @@ func (p *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		target.Healthy = false
 		target.mu.Unlock()
 
+		p.metrics.RecordRouterRequest(string(p.strategy), string(priority), "bad_gateway_502")
 		http.Error(w, fmt.Sprintf("upstream replica error: %v", err), http.StatusBadGateway)
 		return
 	}
 	defer resp.Body.Close()
+
+	p.metrics.RecordRouterRequest(string(p.strategy), string(priority), fmt.Sprintf("status_%d", resp.StatusCode))
 
 	// 6. Forward Response Headers
 	for k, vv := range resp.Header {
@@ -225,9 +248,19 @@ func (p *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 7. Streaming SSE / Chunked Passthrough
 	flusher, isFlusher := w.(http.Flusher)
 	buf := make([]byte, 4096)
+	var firstChunkOnce sync.Once
+	var totalStreamedTokens float64
+
 	for {
 		n, readErr := resp.Body.Read(buf)
 		if n > 0 {
+			firstChunkOnce.Do(func() {
+				ttft := time.Since(start).Seconds()
+				p.metrics.RecordRouterTTFT(string(p.strategy), target.ID, ttft)
+			})
+			if bytes.Contains(buf[:n], []byte("data: ")) {
+				totalStreamedTokens += float64(bytes.Count(buf[:n], []byte("data: ")))
+			}
 			if _, writeErr := w.Write(buf[:n]); writeErr != nil {
 				return // Downstream client disconnected
 			}
@@ -238,5 +271,9 @@ func (p *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if readErr != nil {
 			break
 		}
+	}
+
+	if totalStreamedTokens > 0 {
+		p.metrics.RecordRouterTokens(string(p.strategy), target.ID, totalStreamedTokens)
 	}
 }

@@ -1,0 +1,381 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: meridian-grafana-dashboards
+  namespace: meridian-system
+  labels:
+    grafana_dashboard: "1"
+    app.kubernetes.io/name: meridian
+    app.kubernetes.io/part-of: meridian
+data:
+  meridian-gpu-fleet-overview.json: |
+    {
+      "annotations": {"list": []},
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "id": null,
+      "links": [],
+      "liveNow": false,
+      "panels": [
+        {
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+          "id": 1,
+          "title": "Total Allocated GPUs",
+          "type": "stat",
+          "targets": [
+            {"expr": "sum(meridian_queue_gpu_allocated)", "legendFormat": "Allocated"}
+          ],
+          "options": {"reduceOptions": {"calcs": ["lastNotNull"]}}
+        },
+        {
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+          "id": 2,
+          "title": "Healthy GPUs",
+          "type": "stat",
+          "targets": [
+            {"expr": "sum(meridian_gpu_healthy == 1)", "legendFormat": "Healthy"}
+          ],
+          "options": {"colorMode": "value", "reduceOptions": {"calcs": ["lastNotNull"]}}
+        },
+        {
+          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+          "id": 3,
+          "title": "Tainted / Degraded GPUs",
+          "type": "stat",
+          "targets": [
+            {"expr": "sum(meridian_gpu_healthy == 0)", "legendFormat": "Degraded"}
+          ],
+          "options": {"colorMode": "background", "reduceOptions": {"calcs": ["lastNotNull"]}}
+        },
+        {
+          "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+          "id": 4,
+          "title": "Total XID Events (1h)",
+          "type": "stat",
+          "targets": [
+            {"expr": "sum(increase(meridian_gpu_xid_events_total[1h]))", "legendFormat": "XID Errors"}
+          ],
+          "options": {"reduceOptions": {"calcs": ["lastNotNull"]}}
+        },
+        {
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+          "id": 5,
+          "title": "GPU Die Temperatures (°C) by Node & Device",
+          "type": "timeseries",
+          "targets": [
+            {"expr": "meridian_gpu_temperature_celsius", "legendFormat": "{{node}} ({{gpu}})"}
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": {"drawStyle": "line", "lineInterpolation": "smooth"},
+              "unit": "celsius",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "yellow", "value": 75},
+                  {"color": "red", "value": 85}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+          "id": 6,
+          "title": "XID Hardware & Driver Errors by Severity",
+          "type": "timeseries",
+          "targets": [
+            {"expr": "sum(rate(meridian_gpu_xid_events_total[5m])) by (severity, xid)", "legendFormat": "XID {{xid}} ({{severity}})"}
+          ],
+          "fieldConfig": {
+            "defaults": {"custom": {"drawStyle": "bars", "stacking": {"mode": "normal"}}}
+          }
+        },
+        {
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 12},
+          "id": 7,
+          "title": "Node Recovery Duration (Seconds from Fault to Reschedule)",
+          "type": "timeseries",
+          "targets": [
+            {"expr": "histogram_quantile(0.95, sum(rate(meridian_node_recovery_duration_seconds_bucket[15m])) by (le, node))", "legendFormat": "p95 {{node}}"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "s"}}
+        }
+      ],
+      "refresh": "10s",
+      "schemaVersion": 38,
+      "style": "dark",
+      "tags": ["meridian", "gpu", "hardware"],
+      "time": {"from": "now-1h", "to": "now"},
+      "title": "Meridian — GPU Fleet Overview",
+      "uid": "meridian-gpu-fleet"
+    }
+
+  meridian-workload-scheduling.json: |
+    {
+      "annotations": {"list": []},
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "id": null,
+      "links": [],
+      "liveNow": false,
+      "panels": [
+        {
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+          "id": 1,
+          "title": "Partial Gang Starts (INVARIANT: MUST BE 0)",
+          "type": "stat",
+          "targets": [
+            {"expr": "sum(meridian_gang_partial_starts_total)", "legendFormat": "Violations"}
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "red", "value": 1}
+                ]
+              }
+            }
+          },
+          "options": {"colorMode": "background", "reduceOptions": {"calcs": ["lastNotNull"]}}
+        },
+        {
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+          "id": 2,
+          "title": "Admission Latency p99 (SLO < 500ms)",
+          "type": "stat",
+          "targets": [
+            {"expr": "histogram_quantile(0.99, sum(rate(meridian_workload_admission_latency_seconds_bucket[5m])) by (le))", "legendFormat": "p99"}
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "red", "value": 0.5}
+                ]
+              }
+            }
+          },
+          "options": {"colorMode": "value", "reduceOptions": {"calcs": ["lastNotNull"]}}
+        },
+        {
+          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+          "id": 3,
+          "title": "Gang Start Latency p99 (SLO < 30s)",
+          "type": "stat",
+          "targets": [
+            {"expr": "histogram_quantile(0.99, sum(rate(meridian_gang_start_latency_seconds_bucket[15m])) by (le))", "legendFormat": "p99"}
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "red", "value": 30}
+                ]
+              }
+            }
+          },
+          "options": {"colorMode": "value", "reduceOptions": {"calcs": ["lastNotNull"]}}
+        },
+        {
+          "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+          "id": 4,
+          "title": "Total Preemptions (1h)",
+          "type": "stat",
+          "targets": [
+            {"expr": "sum(increase(meridian_workload_preemptions_total[1h]))", "legendFormat": "Preemptions"}
+          ],
+          "options": {"reduceOptions": {"calcs": ["lastNotNull"]}}
+        },
+        {
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+          "id": 5,
+          "title": "Queue Depth (Waiting Workloads by Priority)",
+          "type": "timeseries",
+          "targets": [
+            {"expr": "sum(meridian_queue_depth) by (queue, priority)", "legendFormat": "{{queue}} (prio {{priority}})"}
+          ],
+          "fieldConfig": {"defaults": {"custom": {"drawStyle": "bars", "stacking": {"mode": "normal"}}}}
+        },
+        {
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+          "id": 6,
+          "title": "Allocated GPUs by Queue & GPU Model",
+          "type": "timeseries",
+          "targets": [
+            {"expr": "sum(meridian_queue_gpu_allocated) by (queue, gpu_type)", "legendFormat": "{{queue}} - {{gpu_type}}"}
+          ],
+          "fieldConfig": {"defaults": {"custom": {"drawStyle": "line", "stacking": {"mode": "normal"}}}}
+        },
+        {
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+          "id": 7,
+          "title": "Admission Latency Quantiles (p50, p90, p99)",
+          "type": "timeseries",
+          "targets": [
+            {"expr": "histogram_quantile(0.50, sum(rate(meridian_workload_admission_latency_seconds_bucket[5m])) by (le))", "legendFormat": "p50"},
+            {"expr": "histogram_quantile(0.90, sum(rate(meridian_workload_admission_latency_seconds_bucket[5m])) by (le))", "legendFormat": "p90"},
+            {"expr": "histogram_quantile(0.99, sum(rate(meridian_workload_admission_latency_seconds_bucket[5m])) by (le))", "legendFormat": "p99 (SLO < 500ms)"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "s"}}
+        },
+        {
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+          "id": 8,
+          "title": "FSM Lifecycle Phase Transitions / sec",
+          "type": "timeseries",
+          "targets": [
+            {"expr": "sum(rate(meridian_workload_phase_transitions_total[5m])) by (from_phase, to_phase)", "legendFormat": "{{from_phase}} → {{to_phase}}"}
+          ]
+        }
+      ],
+      "refresh": "10s",
+      "schemaVersion": 38,
+      "style": "dark",
+      "tags": ["meridian", "workload", "scheduling", "gang"],
+      "time": {"from": "now-1h", "to": "now"},
+      "title": "Meridian — Workload & Scheduling",
+      "uid": "meridian-workload-sched"
+    }
+
+  meridian-inference-router.json: |
+    {
+      "annotations": {"list": []},
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "id": null,
+      "links": [],
+      "liveNow": false,
+      "panels": [
+        {
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+          "id": 1,
+          "title": "TTFT p99 (SLO Target < 150ms)",
+          "type": "stat",
+          "targets": [
+            {"expr": "histogram_quantile(0.99, sum(rate(meridian_router_ttft_seconds_bucket[5m])) by (le))", "legendFormat": "p99"}
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "red", "value": 0.15}
+                ]
+              }
+            }
+          },
+          "options": {"colorMode": "value", "reduceOptions": {"calcs": ["lastNotNull"]}}
+        },
+        {
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+          "id": 2,
+          "title": "Request Throughput (Req/s)",
+          "type": "stat",
+          "targets": [
+            {"expr": "sum(rate(meridian_router_request_total[1m]))", "legendFormat": "RPS"}
+          ],
+          "options": {"reduceOptions": {"calcs": ["lastNotNull"]}}
+        },
+        {
+          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+          "id": 3,
+          "title": "Token Output Rate (Tok/s)",
+          "type": "stat",
+          "targets": [
+            {"expr": "sum(rate(meridian_router_tokens_generated_total[1m]))", "legendFormat": "Tokens/sec"}
+          ],
+          "options": {"reduceOptions": {"calcs": ["lastNotNull"]}}
+        },
+        {
+          "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+          "id": 4,
+          "title": "Load Shed Rate (HTTP 429)",
+          "type": "stat",
+          "targets": [
+            {"expr": "sum(rate(meridian_router_request_total{result=\"shed_429\"}[5m])) / sum(rate(meridian_router_request_total[5m]))", "legendFormat": "Shed Ratio"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "percentunit"}},
+          "options": {"colorMode": "value", "reduceOptions": {"calcs": ["lastNotNull"]}}
+        },
+        {
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+          "id": 5,
+          "title": "Time-To-First-Token (TTFT) by Routing Strategy",
+          "type": "timeseries",
+          "targets": [
+            {"expr": "histogram_quantile(0.50, sum(rate(meridian_router_ttft_seconds_bucket[5m])) by (le, strategy))", "legendFormat": "{{strategy}} p50"},
+            {"expr": "histogram_quantile(0.99, sum(rate(meridian_router_ttft_seconds_bucket[5m])) by (le, strategy))", "legendFormat": "{{strategy}} p99"}
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "custom": {"drawStyle": "line"}
+            }
+          }
+        },
+        {
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+          "id": 6,
+          "title": "KV Cache Utilization by Inference Replica",
+          "type": "timeseries",
+          "targets": [
+            {"expr": "meridian_router_kv_cache_usage", "legendFormat": "{{replica}}"}
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "max": 1.0,
+              "min": 0.0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "yellow", "value": 0.8},
+                  {"color": "red", "value": 0.9}
+                ]
+              }
+            }
+          }
+        },
+        {
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+          "id": 7,
+          "title": "Prefix Cache Hits Rate (PrefixAffinity Strategy)",
+          "type": "timeseries",
+          "targets": [
+            {"expr": "sum(rate(meridian_router_prefix_cache_hits_total[5m])) by (strategy, replica)", "legendFormat": "{{replica}} hits/s"}
+          ]
+        },
+        {
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+          "id": 8,
+          "title": "Active In-Flight Requests by Dispatch Strategy",
+          "type": "timeseries",
+          "targets": [
+            {"expr": "meridian_router_active_requests", "legendFormat": "{{strategy}}"}
+          ]
+        }
+      ],
+      "refresh": "5s",
+      "schemaVersion": 38,
+      "style": "dark",
+      "tags": ["meridian", "inference", "router", "ttft", "vllm"],
+      "time": {"from": "now-30m", "to": "now"},
+      "title": "Meridian — Inference Router",
+      "uid": "meridian-inference-router"
+    }

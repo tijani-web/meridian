@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/tijani-web/meridian/internal/metrics"
 )
 
 // MetricScraper periodically scrapes Prometheus endpoints of active inference replicas.
@@ -100,6 +102,8 @@ func (s *MetricScraper) ScrapeReplica(ctx context.Context, replica *ReplicaState
 	replica.LastScraped = time.Now()
 	replica.Healthy = true
 	replica.mu.Unlock()
+
+	metrics.Default().SetRouterKVCacheUsage(replica.ID, kvUsage)
 
 	return nil
 }

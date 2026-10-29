@@ -1,0 +1,56 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: meridian-controller-manager
+  namespace: meridian-system
+  labels:
+    app.kubernetes.io/name: meridian-controller-manager
+    app.kubernetes.io/part-of: meridian
+spec:
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s
+      scheme: http
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: meridian-router
+  namespace: meridian-system
+  labels:
+    app.kubernetes.io/name: meridian-router
+    app.kubernetes.io/part-of: meridian
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: inference-router
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 5s
+      scrapeTimeout: 4s
+      scheme: http
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: meridian-agent
+  namespace: meridian-system
+  labels:
+    app.kubernetes.io/name: meridian-agent
+    app.kubernetes.io/part-of: meridian
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: node-agent
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 10s
+      scrapeTimeout: 8s
+      scheme: http

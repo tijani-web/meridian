@@ -14,7 +14,7 @@ Machine-readable resume state. Overwritten on every update.
 7125471 (feat(router): Phase 10 — Inference Router, vLLM Emulator, Loadgen, Benchmarks)
 
 ## Status
-`PHASE_11_IN_PROGRESS`
+`PHASE_11_COMPLETE — READY_TO_MERGE`
 
 ## Open Issues
 (none)
@@ -23,9 +23,9 @@ Machine-readable resume state. Overwritten on every update.
 (none — autonomy mode active)
 
 ## Next 3 Actions
-1. Create `docs/design/observability.md` — metrics catalog, SLO definitions, and Grafana dashboard layout.
-2. Implement Prometheus custom metrics in `internal/metrics/` (workload admission latency, router TTFT histogram, KV cache utilization, gang scheduling latency, preemption counts).
-3. Create PrometheusRule CRs for SLO burn-rate alerts and Grafana dashboard ConfigMaps, commit and verify.
+1. Commit all Phase 11 files with Conventional Commit `feat(observability): Phase 11 — Metrics, Grafana Dashboards, SLOs, PrometheusRules, CI syntax fix`.
+2. Push branch `phase/11-observability`, merge PR #10 into `main`, and tag `phase-11-done`.
+3. Advance to Phase 12 (`phase/12-packaging-ha-chaos`): Helm chart, ArgoCD Application, Terraform Kind provisioning, leader failover, postmortem.
 
 ## Phase 08 DoD Checklist
 - [x] `bench/METHODOLOGY.md` updated with host environment, Go version, KWOK simulated node topologies, and statistical parameters
@@ -73,6 +73,18 @@ Machine-readable resume state. Overwritten on every update.
 - [x] §8.3 Four-strategy benchmarks executed with committed raw CSV/JSON results and SVG comparison plots under `bench/results/` and `bench/plots/`
 - [x] Zero mocks or stubs in product code, clean `go vet` and tests green
 
+## Phase 11 DoD Checklist
+- [x] `docs/design/observability.md`: metrics catalog, SLO definitions (SLO-01 to SLO-04), Grafana dashboard architecture
+- [x] `internal/metrics/`: singleton Prometheus registry (`registry.go`) and helper suites for workload, router, GPU hardware, and checkpoints
+- [x] `internal/metrics/metrics_test.go`: unit tests verifying zero collisions, metric types, monotonicity, and nil safety
+- [x] Controller instrumentation: queue depth/allocation/admission latency, workload gang start latency, FSM phase transitions, node health recovery duration
+- [x] Router data plane instrumentation: TTFT histogram, token generation rate, in-flight active requests, prefix cache hits, KV-cache scraping, `/metrics` endpoint
+- [x] `deploy/monitoring/prometheus-rule.yaml`: Multi-window multi-burn-rate alerts for SLO-01 through SLO-04 + critical invariant alerts (partial gang starts)
+- [x] `deploy/monitoring/service-monitor.yaml`: ServiceMonitor CRs for controller-manager, inference router, and node agent
+- [x] `deploy/monitoring/grafana-dashboards.yaml`: ConfigMap containing 3 production-grade dashboards (GPU Fleet Overview, Workload & Scheduling, Inference Router)
+- [x] CI workflow syntax fix: eliminated job-level `hashFiles` in `.github/workflows/ci.yaml`
+- [x] Zero mocks or stubs in product code, clean `go vet` and unit tests green
+
 ## Completed Phases
 - Phase 00 — Bootstrap (completed 2026-10-27)
 - Phase 01 — APIs, CRDs, Webhooks, Envtest Harness (completed 2026-10-27)
@@ -85,9 +97,9 @@ Machine-readable resume state. Overwritten on every update.
 - Phase 08 — Scale & Scheduler Benchmarks (completed 2026-10-28)
 - Phase 09 — Inference Control Plane (completed 2026-10-29)
 - Phase 10 — Inference Router + Emulator + Loadgen + Benchmarks (completed 2026-10-29)
+- Phase 11 — Observability: Metrics, Grafana Dashboards, SLOs, PrometheusRules (completed 2026-10-29)
 
 ## Remaining Phases
-- Phase 11 — Observability: Metrics, Grafana Dashboards, SLOs, PrometheusRules (§6.9)
 - Phase 12 — Packaging, HA, Chaos: Helm, ArgoCD, Terraform, Leader Failover, Postmortem (§9)
 - Phase 13 — Documentation, Resume Bullets, and v0.1.0 Release (§11, §14)
 
