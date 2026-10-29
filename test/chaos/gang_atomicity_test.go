@@ -7,7 +7,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	meridianv1alpha1 "github.com/tijani-web/meridian/api/v1alpha1"
 )
@@ -19,7 +21,7 @@ import (
 // This is enforced by the Permit plugin's all-or-nothing reservation mechanism.
 var _ = Describe("Gang Atomicity Under Churn", Ordered, func() {
 	const (
-		gangSize = 2 // small gang to work on resource-constrained CI kind nodes
+		gangSize  = 2 // small gang to work on resource-constrained CI kind nodes
 		noisyJobs = 3 // background single-GPU jobs to consume capacity
 	)
 
@@ -31,7 +33,7 @@ var _ = Describe("Gang Atomicity Under Churn", Ordered, func() {
 	BeforeAll(func() {
 		By("Submitting noisy single-GPU background jobs to create capacity churn")
 		for i := 0; i < noisyJobs; i++ {
-			w := buildTestWorkload(fmt.Sprintf("noisy-%d-", i), "default", 1, 1)
+			w := buildTestWorkload(fmt.Sprintf("noisy-%d-", i), testNS, 1, 1)
 			if err := k8sClient.Create(ctx, w); err == nil {
 				noisyWorkloadIDs = append(noisyWorkloadIDs, w.Name)
 			}
@@ -59,7 +61,7 @@ var _ = Describe("Gang Atomicity Under Churn", Ordered, func() {
 	It("gang either runs fully or stays pending — never partially started", func() {
 		// Allow up to 3 minutes for the gang to either reach Running or remain Pending.
 		// Under churn, it may take multiple permit cycles.
-		Eventually(func() meridianv1alpha1.WorkloadPhase {
+		Eventually(func() meridianv1alpha1.GPUWorkloadPhase {
 			w := &meridianv1alpha1.GPUWorkload{}
 			if err := k8sClient.Get(ctx, types.NamespacedName{
 				Name:      gangWorkload.Name,
@@ -73,6 +75,8 @@ var _ = Describe("Gang Atomicity Under Churn", Ordered, func() {
 				Equal(meridianv1alpha1.WorkloadPhaseRunning),
 				Equal(meridianv1alpha1.WorkloadPhasePending),
 				Equal(meridianv1alpha1.WorkloadPhaseAdmitted),
+				Equal(meridianv1alpha1.WorkloadPhaseQueued),
+				Equal(meridianv1alpha1.WorkloadPhaseScheduling),
 			),
 			"gang must be in a valid atomic state — never a mix of running and pending pods",
 		)
@@ -111,12 +115,7 @@ var _ = Describe("Gang Atomicity Under Churn", Ordered, func() {
 		}
 	})
 
-	It("meridian_gang_partial_starts_total metric remains zero", func() {
-		// This is the same invariant expressed as a Prometheus metric.
-		// Scrape the manager's metrics endpoint and verify the counter is 0.
-		// On kind, port-forward is not available in test; we use a kubectl exec approach.
-		// Since we cannot guarantee network access here, we verify via API events instead.
-
+	It("no PartialGangStart events emitted for the gang workload", func() {
 		eventList := &corev1.EventList{}
 		Expect(k8sClient.List(ctx, eventList,
 			client.InNamespace(gangWorkload.Namespace),
@@ -134,8 +133,9 @@ var _ = Describe("Gang Atomicity Under Churn", Ordered, func() {
 })
 
 // buildTestWorkload constructs a minimal GPUWorkload for chaos testing.
-// It uses gang.size = gangSize and gpusPerPod = 1 so tests run on CPU-only kind nodes
-// (KWOK-simulated GPU capacity in CI, or real GPU nodes if available).
+// gangSize controls both Gang.Size and Gang.MinAvailable (all-or-nothing).
+// gpusPerPod is set to the given value; in CI kind clusters with KWOK-simulated
+// GPU capacity this resolves correctly, and on real GPU nodes it uses actual GPUs.
 func buildTestWorkload(namePrefix, ns string, gangSize, gpusPerPod int32) *meridianv1alpha1.GPUWorkload {
 	return &meridianv1alpha1.GPUWorkload{
 		ObjectMeta: metav1.ObjectMeta{

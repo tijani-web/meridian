@@ -6,10 +6,10 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	coordinationv1 "k8s.io/api/coordination/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // LeaderElection validates Meridian's HA active-standby failover contract.
@@ -68,8 +68,9 @@ var _ = Describe("Leader Election Failover", Ordered, func() {
 		}
 
 		By(fmt.Sprintf("Deleting active leader pod: %s", leaderPod.Name))
+		gracePeriod := int64(0)
 		Expect(k8sClient.Delete(ctx, leaderPod, &client.DeleteOptions{
-			GracePeriodSeconds: int64Ptr(0),
+			GracePeriodSeconds: &gracePeriod,
 		})).To(Succeed())
 	})
 
@@ -117,21 +118,16 @@ var _ = Describe("Leader Election Failover", Ordered, func() {
 		)
 	})
 
-	It("no GPUWorkloads or GPUQueues were mutated during failover", func() {
-		// Verify status fields are unchanged — reconciliation did not double-create pods.
-		// We can't guarantee no changes, but we can verify quota totals are sane.
-		// This is a smoke check: if the controller hot-looped during failover, resource
-		// versions would have changed excessively and can be observed via Events.
+	It("no pods were double-created during failover", func() {
+		// Verify the controller did not hot-loop and create duplicate pods.
+		// A Created event with count > 2 indicates a double-reconcile bug.
 		eventList := &corev1.EventList{}
 		listErr := k8sClient.List(ctx, eventList,
 			client.InNamespace(testNS),
-			&client.ListOptions{
-				Limit: 100,
-			},
+			&client.ListOptions{Limit: 100},
 		)
 		Expect(listErr).NotTo(HaveOccurred())
 
-		// Count duplicate Created events (a sign of double-reconcile creating pods).
 		duplicatePodCreates := 0
 		for _, ev := range eventList.Items {
 			if ev.Reason == "Created" && ev.InvolvedObject.Kind == "Pod" && ev.Count > 2 {
@@ -139,15 +135,8 @@ var _ = Describe("Leader Election Failover", Ordered, func() {
 			}
 		}
 		Expect(duplicatePodCreates).To(Equal(0),
-			"no pod should have been Created more than twice — duplicate create indicates failover bug",
+			"no pod should have been Created more than twice — "+
+				"duplicate create indicates failover bug",
 		)
 	})
 })
-
-// int64Ptr returns a pointer to the given int64 value.
-// It is used for DeleteOptions.GracePeriodSeconds which requires a *int64.
-func int64Ptr(i int64) *int64 { return &i }
-
-// metav1unused suppresses the "imported and not used" error for the metav1 import
-// used in other test files in this package.
-var _ = metav1.Now

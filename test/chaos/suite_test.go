@@ -24,8 +24,10 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -63,10 +65,14 @@ var _ = BeforeSuite(func() {
 	restCfg, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	Expect(err).NotTo(HaveOccurred())
 
-	scheme := meridianv1alpha1.SchemeBuilder.GroupVersion.String()
-	_ = scheme // suppress unused warning; types registered via init()
+	// Build a scheme that includes both core Kubernetes types and all Meridian CRDs.
+	// Without registering the Meridian scheme, the dynamic client cannot decode
+	// GPUWorkload / GPUQueue / InferenceDeployment objects from the API server.
+	scheme := runtime.NewScheme()
+	Expect(clientgoscheme.AddToScheme(scheme)).To(Succeed())
+	Expect(meridianv1alpha1.AddToScheme(scheme)).To(Succeed())
 
-	k8sClient, err = client.New(restCfg, client.Options{})
+	k8sClient, err = client.New(restCfg, client.Options{Scheme: scheme})
 	Expect(err).NotTo(HaveOccurred())
 
 	kubeClient, err = kubernetes.NewForConfig(restCfg)
@@ -74,7 +80,8 @@ var _ = BeforeSuite(func() {
 
 	// Ensure test namespace exists.
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNS}}
-	_ = k8sClient.Create(ctx, ns) // idempotent: ignore AlreadyExists
+	// Ignore AlreadyExists — this is an idempotent create.
+	_ = k8sClient.Create(ctx, ns)
 })
 
 var _ = AfterSuite(func() {
