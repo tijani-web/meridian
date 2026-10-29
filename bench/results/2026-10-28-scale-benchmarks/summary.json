@@ -1,0 +1,221 @@
+{
+  "fault_tolerance": {
+    "totalFaultsInjected": 50,
+    "timeToDetect": 1237975946,
+    "timeToReschedule": 3461598759,
+    "stepsLostVsLastAck": 11,
+    "jobsResumedPct": 100
+  },
+  "fleet_2000_nodes": {
+    "default_scheduler": {
+      "mode": "default-kube-scheduler",
+      "nodeCount": 2000,
+      "repetitions": 5,
+      "throughputPodsPerSec": {
+        "median": 348.125,
+        "p5": 340.5416666666667,
+        "p95": 356.0416666666667
+      },
+      "peakAllocationRatio": {
+        "median": 1,
+        "p5": 1,
+        "p95": 1
+      },
+      "fragmentationRatio": {
+        "median": 0,
+        "p5": 0,
+        "p95": 0
+      },
+      "meanQueueWaitSec": {
+        "median": 138.522851575,
+        "p5": 136.090299061,
+        "p95": 144.357463252
+      },
+      "p95QueueWaitSec": {
+        "median": 382.233205364,
+        "p5": 379.726247524,
+        "p95": 389.058118216
+      },
+      "p99QueueWaitSec": {
+        "median": 398.502799148,
+        "p5": 392.266217864,
+        "p95": 405.696336788
+      },
+      "meanGangStartSec": {
+        "median": 31.836581901,
+        "p5": 30.497862359,
+        "p95": 33.337320873
+      },
+      "p95GangStartSec": {
+        "median": 60.952941578,
+        "p5": 58.45651307,
+        "p95": 61.94681387
+      },
+      "partiallyStartedGangs": 1,
+      "preemptionsCount": 0,
+      "wastedGPUSecs": {
+        "median": 180,
+        "p5": 180,
+        "p95": 360
+      }
+    },
+    "meridian_scheduler": {
+      "mode": "meridian-scheduler",
+      "nodeCount": 2000,
+      "repetitions": 5,
+      "throughputPodsPerSec": {
+        "median": 348.125,
+        "p5": 340.5416666666667,
+        "p95": 356.0416666666667
+      },
+      "peakAllocationRatio": {
+        "median": 1,
+        "p5": 1,
+        "p95": 1
+      },
+      "fragmentationRatio": {
+        "median": 0,
+        "p5": 0,
+        "p95": 0
+      },
+      "meanQueueWaitSec": {
+        "median": 107.58938009,
+        "p5": 106.646786706,
+        "p95": 111.695116779
+      },
+      "p95QueueWaitSec": {
+        "median": 286.674904023,
+        "p5": 284.794685643,
+        "p95": 291.793588662
+      },
+      "p99QueueWaitSec": {
+        "median": 298.877099361,
+        "p5": 294.199663398,
+        "p95": 304.272252591
+      },
+      "meanGangStartSec": {
+        "median": 31.95616604,
+        "p5": 30.333578528,
+        "p95": 33.427270877
+      },
+      "p95GangStartSec": {
+        "median": 62.065148992,
+        "p5": 58.901142977,
+        "p95": 62.892921321
+      },
+      "partiallyStartedGangs": 0,
+      "preemptionsCount": 0,
+      "wastedGPUSecs": {
+        "median": 0,
+        "p5": 0,
+        "p95": 0
+      }
+    }
+  },
+  "fleet_500_nodes": {
+    "default_scheduler": {
+      "mode": "default-kube-scheduler",
+      "nodeCount": 500,
+      "repetitions": 5,
+      "throughputPodsPerSec": {
+        "median": 344.3333333333333,
+        "p5": 337.3333333333333,
+        "p95": 386.6666666666667
+      },
+      "peakAllocationRatio": {
+        "median": 1,
+        "p5": 1,
+        "p95": 1
+      },
+      "fragmentationRatio": {
+        "median": 0,
+        "p5": 0,
+        "p95": 0
+      },
+      "meanQueueWaitSec": {
+        "median": 33.305505894,
+        "p5": 30.885492645,
+        "p95": 38.374428668
+      },
+      "p95QueueWaitSec": {
+        "median": 94.609185508,
+        "p5": 87.61528832,
+        "p95": 94.98222338
+      },
+      "p99QueueWaitSec": {
+        "median": 97.669361444,
+        "p5": 91.33188946,
+        "p95": 99.849421784
+      },
+      "meanGangStartSec": {
+        "median": 7.688800365,
+        "p5": 6.974025874,
+        "p95": 9.514557521
+      },
+      "p95GangStartSec": {
+        "median": 14.281674965,
+        "p5": 12.218154578,
+        "p95": 17.583705614
+      },
+      "partiallyStartedGangs": 1,
+      "preemptionsCount": 0,
+      "wastedGPUSecs": {
+        "median": 180,
+        "p5": 180,
+        "p95": 360
+      }
+    },
+    "meridian_scheduler": {
+      "mode": "meridian-scheduler",
+      "nodeCount": 500,
+      "repetitions": 5,
+      "throughputPodsPerSec": {
+        "median": 344.3333333333333,
+        "p5": 337.3333333333333,
+        "p95": 386.6666666666667
+      },
+      "peakAllocationRatio": {
+        "median": 1,
+        "p5": 1,
+        "p95": 1
+      },
+      "fragmentationRatio": {
+        "median": 0,
+        "p5": 0,
+        "p95": 0
+      },
+      "meanQueueWaitSec": {
+        "median": 25.346128034,
+        "p5": 23.43596154,
+        "p95": 28.634005072
+      },
+      "p95QueueWaitSec": {
+        "median": 70.956889131,
+        "p5": 65.71146624,
+        "p95": 71.236667535
+      },
+      "p99QueueWaitSec": {
+        "median": 73.252021083,
+        "p5": 68.498917095,
+        "p95": 74.887066338
+      },
+      "meanGangStartSec": {
+        "median": 7.521131062,
+        "p5": 6.601142191,
+        "p95": 9.465690445
+      },
+      "p95GangStartSec": {
+        "median": 14.946059071,
+        "p5": 13.145044293,
+        "p95": 18.459519646
+      },
+      "partiallyStartedGangs": 0,
+      "preemptionsCount": 0,
+      "wastedGPUSecs": {
+        "median": 0,
+        "p5": 0,
+        "p95": 0
+      }
+    }
+  }
+}

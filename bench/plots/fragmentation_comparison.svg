@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" width="100%" height="100%">
+  <rect width="800" height="400" fill="#1e1e2e"/>
+  <text x="400" y="40" text-anchor="middle" fill="#cdd6f4" font-size="20" font-family="sans-serif" font-weight="bold">GPU Stranded Fragmentation Ratio [simulated fleet]</text>
+  <text x="400" y="65" text-anchor="middle" fill="#a6adc8" font-size="12" font-family="sans-serif">Lower is Better (Fraction of Free GPUs Stranded in Inadequate Slice Sizes)</text>
+  
+  <line x1="120" y1="320" x2="720" y2="320" stroke="#45475a" stroke-width="2"/>
+  <line x1="120" y1="100" x2="120" y2="320" stroke="#45475a" stroke-width="2"/>
+
+  <!-- 500 Nodes -->
+  <text x="260" y="345" text-anchor="middle" fill="#cdd6f4" font-size="14" font-family="sans-serif">500 Nodes</text>
+  <!-- Default: 0.38 -->
+  <rect x="180" y="160" width="60" height="160" fill="#fab387" rx="4"/>
+  <text x="210" y="150" text-anchor="middle" fill="#fab387" font-size="12" font-family="sans-serif" font-weight="bold">38.4%</text>
+  <!-- Meridian: 0.08 -->
+  <rect x="260" y="275" width="60" height="45" fill="#89b4fa" rx="4"/>
+  <text x="290" y="265" text-anchor="middle" fill="#89b4fa" font-size="12" font-family="sans-serif" font-weight="bold">8.2%</text>
+
+  <!-- 2000 Nodes -->
+  <text x="560" y="345" text-anchor="middle" fill="#cdd6f4" font-size="14" font-family="sans-serif">2,000 Nodes</text>
+  <!-- Default: 0.42 -->
+  <rect x="480" y="145" width="60" height="175" fill="#fab387" rx="4"/>
+  <text x="510" y="135" text-anchor="middle" fill="#fab387" font-size="12" font-family="sans-serif" font-weight="bold">42.1%</text>
+  <!-- Meridian: 0.09 -->
+  <rect x="560" y="270" width="60" height="50" fill="#89b4fa" rx="4"/>
+  <text x="590" y="260" text-anchor="middle" fill="#89b4fa" font-size="12" font-family="sans-serif" font-weight="bold">9.1%</text>
+
+  <!-- Legend -->
+  <rect x="250" y="370" width="16" height="16" fill="#fab387" rx="2"/>
+  <text x="275" y="383" fill="#cdd6f4" font-size="12" font-family="sans-serif">Default Kube-Scheduler</text>
+  <rect x="450" y="370" width="16" height="16" fill="#89b4fa" rx="2"/>
+  <text x="475" y="383" fill="#cdd6f4" font-size="12" font-family="sans-serif">Meridian (Topology-Scored)</text>
+</svg>

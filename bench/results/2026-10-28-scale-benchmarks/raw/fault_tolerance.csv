@@ -1,0 +1,2 @@
+faults_injected,time_to_detect_sec,time_to_reschedule_sec,steps_lost_vs_last_ack,jobs_resumed_pct
+50,1.238,3.462,11,100.0

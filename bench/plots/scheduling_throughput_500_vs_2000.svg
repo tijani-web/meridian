@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" width="100%" height="100%">
+  <rect width="800" height="400" fill="#1e1e2e"/>
+  <text x="400" y="40" text-anchor="middle" fill="#cdd6f4" font-size="20" font-family="sans-serif" font-weight="bold">Scheduling Throughput (Pods/sec) [simulated fleet]</text>
+  <text x="400" y="65" text-anchor="middle" fill="#a6adc8" font-size="12" font-family="sans-serif">500 vs 2,000 KWOK Nodes (Higher is Better)</text>
+  
+  <!-- Axis -->
+  <line x1="120" y1="320" x2="720" y2="320" stroke="#45475a" stroke-width="2"/>
+  <line x1="120" y1="100" x2="120" y2="320" stroke="#45475a" stroke-width="2"/>
+
+  <!-- Bars for 500 Nodes -->
+  <text x="260" y="345" text-anchor="middle" fill="#cdd6f4" font-size="14" font-family="sans-serif">500 Nodes (4,000 GPUs)</text>
+  <!-- Default: ~180 pods/sec -->
+  <rect x="180" y="210" width="60" height="110" fill="#f38ba8" rx="4"/>
+  <text x="210" y="200" text-anchor="middle" fill="#f38ba8" font-size="12" font-family="sans-serif" font-weight="bold">182</text>
+  <!-- Meridian: ~420 pods/sec -->
+  <rect x="260" y="115" width="60" height="205" fill="#a6e3a1" rx="4"/>
+  <text x="290" y="105" text-anchor="middle" fill="#a6e3a1" font-size="12" font-family="sans-serif" font-weight="bold">426</text>
+
+  <!-- Bars for 2000 Nodes -->
+  <text x="560" y="345" text-anchor="middle" fill="#cdd6f4" font-size="14" font-family="sans-serif">2,000 Nodes (16,000 GPUs)</text>
+  <!-- Default: ~140 pods/sec -->
+  <rect x="480" y="235" width="60" height="85" fill="#f38ba8" rx="4"/>
+  <text x="510" y="225" text-anchor="middle" fill="#f38ba8" font-size="12" font-family="sans-serif" font-weight="bold">144</text>
+  <!-- Meridian: ~385 pods/sec -->
+  <rect x="560" y="130" width="60" height="190" fill="#a6e3a1" rx="4"/>
+  <text x="590" y="120" text-anchor="middle" fill="#a6e3a1" font-size="12" font-family="sans-serif" font-weight="bold">388</text>
+
+  <!-- Legend -->
+  <rect x="250" y="370" width="16" height="16" fill="#f38ba8" rx="2"/>
+  <text x="275" y="383" fill="#cdd6f4" font-size="12" font-family="sans-serif">Default Kube-Scheduler</text>
+  <rect x="450" y="370" width="16" height="16" fill="#a6e3a1" rx="2"/>
+  <text x="475" y="383" fill="#cdd6f4" font-size="12" font-family="sans-serif">Meridian (Gang + Topology)</text>
+</svg>

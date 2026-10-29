@@ -5,16 +5,16 @@ Machine-readable resume state. Overwritten on every update.
 ---
 
 ## Current Phase
-`phase/07-explainability-tracing`
+`phase/08-scale-benchmarks`
 
 ## Current Branch
-`phase/07-explainability-tracing`
+`phase/08-scale-benchmarks`
 
 ## Last Green Commit
-Pending commit for Phase 07
+Pending commit for Phase 08
 
 ## Status
-`PHASE_07_COMPLETE — READY_FOR_PR`
+`PHASE_08_COMPLETE — READY_FOR_PR`
 
 ## Open Issues
 (none)
@@ -23,19 +23,30 @@ Pending commit for Phase 07
 (none — autonomy mode active)
 
 ## Next 3 Actions
-1. Commit Phase 07 files with Conventional Commit `feat(explain): Phase 07 — Explainability engine, meridianctl CLI, OpenTelemetry tracing, and stuck-workload diagnostics`.
-2. Push branch `phase/07-explainability-tracing`.
-3. Open PR to `main`, merge, tag `phase-07-done`, proceed to Phase 08 (`phase/08-scale-benchmarks`).
+1. Commit Phase 08 files with Conventional Commit `feat(bench): Phase 08 — Scale and scheduler benchmarks, KWOK fleet, trace-gen, committed runs, and plots`.
+2. Push branch `phase/08-scale-benchmarks`.
+3. Open PR to `main`, merge, tag `phase-08-done`, proceed to Phase 09 (`phase/09-inference-control-plane`).
 
-## Phase 07 DoD Checklist
-- [x] Design doc `docs/design/decision-records.md` with decision ring buffer bounds (~64 MiB heap bound), diagnostic ordering, and OTel span graph
-- [x] `internal/explain/` (diagnostic explainer querying live CRDs, nodes, pods, and status)
-- [x] `internal/explain/explainer_test.go` — all unit tests PASS (including all 5 stuck-workload scenarios)
-- [x] `cmd/meridianctl/` CLI binary with `explain workload`, `explain inference`, and `status cluster`
-- [x] `internal/telemetry/tracing/` (OpenTelemetry tracer, monotonic `SequenceTracker`, lifecycle span attributes)
-- [x] `internal/telemetry/tracing/tracer_test.go` — all unit tests PASS
-- [x] `deploy/tracing/jaeger.yaml` in-cluster Jaeger all-in-one with OTLP receiver (gRPC :4317, HTTP :4318, UI :16686)
-- [x] `docs/explain-samples.md` committed sample diagnostic outputs for all 5 stuck-workload scenarios, cluster status, and inference
+## Phase 08 DoD Checklist
+- [x] `bench/METHODOLOGY.md` updated with host environment, Go version, KWOK simulated node topologies, and statistical parameters
+- [x] `pkg/tracegen/` synthetic generator with Poisson arrivals, 1/2/4/8 GPUs per replica, gang size 1-16 pods (total 1-64 GPUs), 3 queues, and 3 priority tiers
+- [x] `tools/trace-gen/` standalone CLI supporting `--jobs`, `--seed`, `--format`, and `--replay`
+- [x] `pkg/tracegen/generator_test.go` — all unit tests PASS
+- [x] `deploy/kwok/` simulated GPU fleet configuration (`kwok-deployment.yaml`, `generate-fleet.sh`, `generate-fleet.ps1`) for 500 to 2,000 nodes
+- [x] `bench/runner/` benchmark simulator with topology packing, gang reservation, and fault tolerance
+- [x] `bench/runner/simulator_test.go` — all unit tests PASS (proving Meridian's 0 partially-started gang invariant)
+- [x] `bench/cmd/run-benchmarks/main.go` CLI runner + `bench/scripts/run-benchmarks.sh` / `.ps1`
+- [x] Committed raw CSV/JSON benchmark results under `bench/results/2026-10-28-scale-benchmarks/`:
+  - `params.json`
+  - `raw/scheduler_500_nodes.csv`
+  - `raw/scheduler_2000_nodes.csv`
+  - `raw/fault_tolerance.csv`
+  - `summary.json`
+- [x] Committed SVG plots under `bench/plots/`:
+  - `scheduling_throughput_500_vs_2000.svg`
+  - `fragmentation_comparison.svg`
+  - `gang_start_latency.svg`
+  - `fault_recovery_timeline.svg`
 - [x] Zero `fake.NewClientBuilder` across all test packages outside tools, zero mocks or stubs in product code
 - [x] All unit and integration tests green
 
@@ -48,6 +59,7 @@ Pending commit for Phase 07
 - Phase 05 — Checkpoint Protocol & Preemption (completed 2026-10-28)
 - Phase 06 — Node Health, Telemetry, and Fault Controller (completed 2026-10-28)
 - Phase 07 — Explainability & Tracing (completed 2026-10-28)
+- Phase 08 — Scale & Scheduler Benchmarks (completed 2026-10-28)
 
 ## Tags Pushed
 - phase-00-done
@@ -57,4 +69,5 @@ Pending commit for Phase 07
 - phase-04-done
 - phase-05-done
 - phase-06-done
-- phase-07-done (pending — push after PR merge)
+- phase-07-done
+- phase-08-done (pending — push after PR merge)

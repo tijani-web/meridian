@@ -1,0 +1,23 @@
+{
+  "date": "2026-10-28",
+  "fleetType": "KWOK simulated nodes",
+  "gpusPerNode": 8,
+  "jobMix": "1/2/4/8 GPUs per pod, gang sizes 1-16 pods (total 1-64 GPUs), 3 queues, mixed priorities",
+  "metrics": [
+    "throughput_pods_per_sec",
+    "peak_allocation_ratio",
+    "fragmentation_ratio",
+    "mean_queue_wait_sec",
+    "p95_queue_wait_sec",
+    "mean_gang_start_sec",
+    "partially_started_gangs",
+    "wasted_gpu_secs"
+  ],
+  "nodes": [
+    500,
+    2000
+  ],
+  "repetitions": 5,
+  "seed": 42,
+  "warmup": 1
+}
