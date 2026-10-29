@@ -95,11 +95,24 @@ var _ = Describe("Node Health Controller & Workload Recovery", func() {
 				g.Expect(pods.Items).To(HaveLen(2))
 			}, 10*time.Second, 100*time.Millisecond).Should(Succeed())
 
-			// Simulate scheduler binding pod 0 to the test node and moving workload to Running
+			// Simulate scheduler binding pod 0 to the test node: in envtest there is no
+			// real scheduler, so NodeName is immutable after creation. We delete the gated
+			// pod and recreate it with NodeName set at creation time — exactly what a real
+			// scheduler binding would produce in etcd.
 			p0 := &pods.Items[0]
-			p0Orig := p0.DeepCopy()
-			p0.Spec.NodeName = nodeName
-			Expect(k8sClient.Patch(ctx, p0, client.MergeFrom(p0Orig))).To(Succeed())
+			boundPod := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      p0.Name + "-bound",
+					Namespace: p0.Namespace,
+					Labels:    p0.Labels,
+				},
+				Spec: corev1.PodSpec{
+					NodeName:   nodeName,
+					Containers: p0.Spec.Containers,
+				},
+			}
+			Expect(k8sClient.Delete(ctx, p0)).To(Succeed())
+			Expect(k8sClient.Create(ctx, boundPod)).To(Succeed())
 
 			orig = w.DeepCopy()
 			w.Status.Phase = meridianv1alpha1.WorkloadPhaseRunning
@@ -125,11 +138,12 @@ var _ = Describe("Node Health Controller & Workload Recovery", func() {
 				g.Expect(w.Status.Generation).To(Equal(int64(2)))
 			}, 10*time.Second, 100*time.Millisecond).Should(Succeed())
 
-			// Pod 0 on broken node should be deleted or marked for deletion
+			// boundPod on the broken node should be deleted or marked for deletion by
+			// the health controller once it detects the NoExecute taint.
 			Eventually(func(g Gomega) {
-				var fetchedP0 corev1.Pod
-				err := k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: p0.Name}, &fetchedP0)
-				g.Expect(err != nil || !fetchedP0.DeletionTimestamp.IsZero()).To(BeTrue())
+				var fetchedBound corev1.Pod
+				err := k8sClient.Get(ctx, client.ObjectKeyFromObject(boundPod), &fetchedBound)
+				g.Expect(err != nil || !fetchedBound.DeletionTimestamp.IsZero()).To(BeTrue())
 			}, 10*time.Second, 100*time.Millisecond).Should(Succeed())
 		})
 	})

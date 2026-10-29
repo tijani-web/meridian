@@ -27,6 +27,10 @@ var log = logf.Log.WithName("queue-controller")
 const (
 	// AdmissionSchedulingGate is the gate removed from pods when the gang is admitted.
 	AdmissionSchedulingGate = "meridian.dev/admission-gate"
+
+	// LabelQueueName is the pod label storing the owning GPUQueue name.
+	// Must match workload.LabelQueue — defined separately to avoid a circular import.
+	LabelQueueName = "meridian.dev/queue"
 )
 
 // QueueReconciler reconciles a GPUQueue, managing quota tracking, DRF-lite fair-share admission,
@@ -239,7 +243,10 @@ func (r *QueueReconciler) admitWorkload(ctx context.Context, w *meridianv1alpha1
 				if len(newGates) != len(pod.Spec.SchedulingGates) {
 					origPod := pod.DeepCopy()
 					pod.Spec.SchedulingGates = newGates
-					_ = r.Patch(ctx, pod, client.MergeFrom(origPod))
+					if patchErr := r.Patch(ctx, pod, client.MergeFrom(origPod)); patchErr != nil {
+						// Non-fatal: pod watch will re-trigger gate removal on next reconcile.
+						log.Error(patchErr, "failed to remove admission gate from pod", "pod", pod.Name)
+					}
 				}
 			}
 		}
@@ -306,19 +313,46 @@ func (r *QueueReconciler) initiateReclaim(
 
 // SetupWithManager registers the QueueReconciler with the controller manager.
 func (r *QueueReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// mapWorkloadToQueue maps a GPUWorkload change to its owning queue reconcile key.
+	mapWorkloadToQueue := handler.EnqueueRequestsFromMapFunc(
+		func(ctx context.Context, obj client.Object) []reconcile.Request {
+			w, ok := obj.(*meridianv1alpha1.GPUWorkload)
+			if !ok || w.Spec.QueueName == "" {
+				return nil
+			}
+			return []reconcile.Request{
+				{NamespacedName: client.ObjectKey{Name: w.Spec.QueueName}},
+			}
+		})
+
+	// mapPodToQueue maps a gang member pod back to its owning queue so that the
+	// gate-removal pass is re-triggered when pods are created after admission.
+	// This closes the race where the queue controller admits a workload before
+	// the workload controller has created the gang pods.
+	mapPodToQueue := handler.EnqueueRequestsFromMapFunc(
+		func(ctx context.Context, obj client.Object) []reconcile.Request {
+			pod, ok := obj.(*corev1.Pod)
+			if !ok {
+				return nil
+			}
+			qName, exists := pod.Labels[LabelQueueName]
+			if !exists || qName == "" {
+				return nil
+			}
+			// Only re-trigger if the admission gate is still present on the pod.
+			for _, g := range pod.Spec.SchedulingGates {
+				if g.Name == AdmissionSchedulingGate {
+					return []reconcile.Request{
+						{NamespacedName: client.ObjectKey{Name: qName}},
+					}
+				}
+			}
+			return nil
+		})
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&meridianv1alpha1.GPUQueue{}).
-		Watches(
-			&meridianv1alpha1.GPUWorkload{},
-			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-				w, ok := obj.(*meridianv1alpha1.GPUWorkload)
-				if !ok || w.Spec.QueueName == "" {
-					return nil
-				}
-				return []reconcile.Request{
-					{NamespacedName: client.ObjectKey{Name: w.Spec.QueueName}},
-				}
-			}),
-		).
+		Watches(&meridianv1alpha1.GPUWorkload{}, mapWorkloadToQueue).
+		Watches(&corev1.Pod{}, mapPodToQueue).
 		Complete(r)
 }
